@@ -39,7 +39,7 @@ from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import upload_import_unit
 
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
-from pulp_2_tests.tests.rpm.utils import set_up_module
+from pulp_2_tests.tests.rpm.utils import check_issue_3875, set_up_module
 
 
 _REPOS = {}  # e.g. {'signed': {'_href': …}}
@@ -150,6 +150,8 @@ class RequireValidKeyTestCase(_BaseTestCase):
 
         Assert no packages are copied in.
         """
+        if check_issue_3875(self.cfg):
+            self.skipTest('https://pulp.plan.io/issues/3875')
         repo = self.create_populate_repo({
             'allowed_keys': [PULP_FIXTURES_KEY_ID],
             'require_signature': True,
@@ -172,6 +174,8 @@ class RequireInvalidKeyTestCase(_BaseTestCase):
 
         Assert no packages are copied in.
         """
+        if check_issue_3875(self.cfg):
+            self.skipTest('https://pulp.plan.io/issues/3875')
         repo = self.create_populate_repo({
             'allowed_keys': ['01234567'],
             'require_signature': True,
@@ -183,6 +187,8 @@ class RequireInvalidKeyTestCase(_BaseTestCase):
 
         Assert no packages are copied in.
         """
+        if check_issue_3875(self.cfg):
+            self.skipTest('https://pulp.plan.io/issues/3875')
         repo = self.create_populate_repo({
             'allowed_keys': ['01234567'],
             'require_signature': True,
@@ -217,6 +223,8 @@ class RequireAnyKeyTestCase(_BaseTestCase):
 
         Assert no packages are copied in.
         """
+        if check_issue_3875(self.cfg):
+            self.skipTest('https://pulp.plan.io/issues/3875')
         repo = self.create_populate_repo({
             'allowed_keys': [],
             'require_signature': True,
@@ -239,6 +247,8 @@ class AllowInvalidKeyTestCase(_BaseTestCase):
 
         Assert no packages are copied in.
         """
+        if check_issue_3875(self.cfg):
+            self.skipTest('https://pulp.plan.io/issues/3875')
         repo = self.create_populate_repo({
             'allowed_keys': ['01234567'],
             'require_signature': False,
