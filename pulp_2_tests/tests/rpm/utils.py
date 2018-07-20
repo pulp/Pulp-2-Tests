@@ -103,6 +103,17 @@ def check_issue_3104(cfg):
             not selectors.bug_is_fixed(3104, cfg.pulp_version))
 
 
+def check_issue_3875(cfg):
+    """Return true if `Pulp #3875`_ affects the targeted Pulp system.
+
+    :param cfg: The Pulp system under test.
+
+    .. _Pulp #3875: https://pulp.plan.io/issues/3875
+    """
+    return (cfg.pulp_version >= Version('2.17') and
+            not selectors.bug_is_fixed(3875, cfg.pulp_version))
+
+
 def os_is_f26(cfg, pulp_host=None):
     """Tell whether the given Pulp host's OS is F26."""
     return (utils.get_os_release_id(cfg, pulp_host) == 'fedora' and
