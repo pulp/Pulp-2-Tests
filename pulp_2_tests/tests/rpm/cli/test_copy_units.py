@@ -13,6 +13,7 @@ from pulp_2_tests.tests.rpm.utils import (
     check_issue_2277,
     check_issue_2620,
     check_issue_3104,
+    check_issue_3876,
     gen_yum_config_file,
     set_up_module,
 )
@@ -131,14 +132,18 @@ class CopyRecursiveTestCase(UtilsMixin, unittest.TestCase):
         copied.
         """
         cfg = config.get_config()
+        if check_issue_3876(cfg):
+            self.skipTest('https://pulp.plan.io/issues/3876')
         if check_issue_2620(cfg):
             self.skipTest('https://pulp.plan.io/issues/2620')
         repo_id = self.create_repo(cfg)
-        cli.Client(cfg).run(
-            'pulp-admin rpm repo copy rpm --from-repo-id {} --to-repo-id {} '
-            '--str-eq name=chimpanzee --recursive'
-            .format(_REPO_ID, repo_id).split()
-        )
+        proc = cli.Client(cfg).run((
+            'pulp-admin', 'rpm', 'repo', 'copy', 'rpm', '--from-repo-id',
+            _REPO_ID, '--to-repo-id', repo_id, '--str-eq', 'name=chimpanzee',
+            '--recursive',
+        ))
+        for stream in ('stdout', 'stderr'):
+            self.assertNotIn('Task Failed', getattr(proc, stream))
 
         # Verify only one "walrus" unit has been copied
         dst_rpms = _get_rpm_names_versions(cfg, repo_id)
@@ -206,6 +211,8 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
     def test_all(self):
         """Update an RPM in a repository and on a host."""
         cfg = config.get_config()
+        if check_issue_3876(cfg):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/3876')
         if check_issue_3104(cfg):
             raise unittest.SkipTest('https://pulp.plan.io/issues/3104')
         if check_issue_2277(cfg):
@@ -214,7 +221,7 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
             raise unittest.SkipTest('https://pulp.plan.io/issues/2620')
         client = cli.Client(cfg)
         pkg_mgr = cli.PackageManager(cfg)
-        sudo = '' if cli.is_root(cfg) else 'sudo '
+        sudo = () if cli.is_root(cfg) else ('sudo',)
         verify = cfg.get_hosts('api')[0].roles['api'].get('verify')
 
         # Create the second repository.
@@ -237,13 +244,10 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
             repositoryid=repo_id,
             sslverify='yes' if verify else 'no',
         )
-        self.addCleanup(
-            client.run,
-            '{}rm {}'.format(sudo, repo_path).split()
-        )
+        self.addCleanup(client.run, sudo + ('rm', repo_path))
         pkg_mgr.install(rpm_name)
         self.addCleanup(pkg_mgr.uninstall, rpm_name)
-        client.run(['rpm', '-q', rpm_name])
+        client.run(('rpm', '-q', rpm_name))
 
         # Copy the newer RPM to the second repository, and publish it.
         self._copy_and_publish(cfg, rpm_name, rpm_versions[1], repo_id)
@@ -262,28 +266,33 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
         client = cli.Client(cfg)
 
         # Copy the package and its dependencies to the new repo
-        client.run(
-            'pulp-admin rpm repo copy rpm --from-repo-id {} --to-repo-id {} '
-            '--str-eq=name={} --str-eq=version={} --recursive'
-            .format(_REPO_ID, repo_id, rpm_name, rpm_version).split()
-        )
+        proc = client.run((
+            'pulp-admin', 'rpm', 'repo', 'copy', 'rpm',
+            '--from-repo-id', _REPO_ID,
+            '--to-repo-id', repo_id,
+            '--str-eq', 'name={}'.format(rpm_name),
+            '--str-eq', 'version={}'.format(rpm_version),
+            '--recursive',
+        ))
+        for stream in ('stdout', 'stderr'):
+            self.assertNotIn('Task Failed', getattr(proc, stream))
 
         # Search for the RPM's name/version in repo2's content.
-        result = client.run(
-            'pulp-admin rpm repo content rpm --repo-id {} --str-eq name={} '
-            '--str-eq version={}'
-            .format(repo_id, rpm_name, rpm_version).split()
-        )
+        proc = client.run((
+            'pulp-admin', 'rpm', 'repo', 'content', 'rpm',
+            '--repo-id', repo_id,
+            '--str-eq', 'name={}'.format(rpm_name),
+            '--str-eq', 'version={}'.format(rpm_version),
+        ))
         with self.subTest(comment='rpm name present'):
-            self.assertIn(rpm_name, result.stdout)
+            self.assertIn(rpm_name, proc.stdout)
         with self.subTest(comment='rpm version present'):
-            self.assertIn(rpm_version, result.stdout)
+            self.assertIn(rpm_version, proc.stdout)
 
         # Publish repo2 and verify no errors.
-        proc = client.run(
-            'pulp-admin rpm repo publish run --repo-id {}'
-            .format(repo_id).split()
-        )
+        proc = client.run((
+            'pulp-admin', 'rpm', 'repo', 'publish', 'run', '--repo-id', repo_id
+        ))
         for stream in ('stdout', 'stderr'):
             with self.subTest(stream=stream):
                 self.assertNotIn('Task Failed', getattr(proc, stream))
