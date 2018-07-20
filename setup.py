@@ -41,7 +41,7 @@ setup(
     install_requires=[
         'jsonschema',
         'packaging',
-        'pulp-smash',
+        'pulp-smash>=1!0.0.1,<1!1',
         'python-dateutil',
     ],
     extras_require={
