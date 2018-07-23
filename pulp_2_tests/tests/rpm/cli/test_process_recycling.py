@@ -4,10 +4,10 @@ import time
 import unittest
 
 from pulp_smash import cli, config, selectors, utils
-from pulp_smash.constants import RPM_UNSIGNED_FEED_URL
 from pulp_smash.pulp2.constants import PULP_SERVICES
 from pulp_smash.pulp2.utils import pulp_admin_login
 
+from pulp_2_tests.constants import RPM_UNSIGNED_FEED_URL
 from pulp_2_tests.tests.rpm.utils import set_up_module
 
 

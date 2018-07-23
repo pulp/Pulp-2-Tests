@@ -22,12 +22,15 @@ import inspect
 import unittest
 
 from pulp_smash import api, config, selectors
-from pulp_smash.constants import (
+from pulp_smash.constants import PULP_FIXTURES_KEY_ID
+from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
+from pulp_smash.pulp2.utils import sync_repo
+
+from pulp_2_tests.constants import (
     DRPM_SIGNED_FEED_COUNT,
     DRPM_SIGNED_FEED_URL,
     DRPM_UNSIGNED_FEED_COUNT,
     DRPM_UNSIGNED_FEED_URL,
-    PULP_FIXTURES_KEY_ID,
     RPM_SIGNED_FEED_COUNT,
     RPM_SIGNED_FEED_URL,
     RPM_UNSIGNED_FEED_COUNT,
@@ -37,9 +40,6 @@ from pulp_smash.constants import (
     SRPM_UNSIGNED_FEED_COUNT,
     SRPM_UNSIGNED_FEED_URL,
 )
-from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import sync_repo
-
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import set_up_module
 

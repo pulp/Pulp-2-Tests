@@ -6,10 +6,10 @@ import unittest
 from urllib.parse import urlsplit
 
 from pulp_smash import api, config, selectors, utils
-from pulp_smash.constants import FILE_URL, RPM_UNSIGNED_URL
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import upload_import_unit
 
+from pulp_2_tests.constants import FILE_URL, RPM_UNSIGNED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 

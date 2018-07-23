@@ -5,10 +5,10 @@ from urllib.parse import urljoin
 
 from packaging.version import Version
 from pulp_smash import api, config, selectors
-from pulp_smash.constants import DOCKER_V1_FEED_URL, DOCKER_V2_FEED_URL
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from requests.exceptions import HTTPError
 
+from pulp_2_tests.constants import DOCKER_V1_FEED_URL, DOCKER_V2_FEED_URL
 from pulp_2_tests.tests.docker.api_v2.utils import gen_repo
 from pulp_2_tests.tests.docker.utils import (
     get_upstream_name,

@@ -3,9 +3,9 @@
 import unittest
 
 from pulp_smash import cli, config, selectors, utils
-from pulp_smash.constants import PUPPET_FEED_2, PUPPET_QUERY_2
 from pulp_smash.pulp2.utils import pulp_admin_login
 
+from pulp_2_tests.constants import PUPPET_FEED_2, PUPPET_QUERY_2
 from pulp_2_tests.tests.puppet.utils import set_up_module
 
 

@@ -47,20 +47,20 @@ For more information, see `Pulp #1991`_ and `Pulp Smash #347`_.
 import unittest
 from itertools import chain
 
-from requests.exceptions import HTTPError
 from pulp_smash import api, config, exceptions, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.constants import PULP_FIXTURES_KEY_ID
+from pulp_smash.pulp2.constants import REPOSITORY_PATH
+from pulp_smash.pulp2.utils import BaseAPITestCase, upload_import_unit
+from requests.exceptions import HTTPError
+
+from pulp_2_tests.constants import (
     DRPM_SIGNED_URL,
     DRPM_UNSIGNED_URL,
-    PULP_FIXTURES_KEY_ID,
     RPM_SIGNED_URL,
     RPM_UNSIGNED_URL,
     SRPM_SIGNED_URL,
     SRPM_UNSIGNED_URL,
 )
-from pulp_smash.pulp2.constants import REPOSITORY_PATH
-from pulp_smash.pulp2.utils import BaseAPITestCase, upload_import_unit
-
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import set_up_module
 

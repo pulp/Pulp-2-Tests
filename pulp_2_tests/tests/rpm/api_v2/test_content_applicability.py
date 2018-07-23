@@ -10,11 +10,6 @@ from urllib.parse import urljoin
 
 from jsonschema import validate
 from pulp_smash import api, config, utils
-from pulp_smash.constants import (
-    RPM_UNSIGNED_FEED_URL,
-    RPM_DATA,
-    RPM2_DATA,
-)
 from pulp_smash.pulp2.constants import (
     CONSUMERS_ACTIONS_CONTENT_REGENERATE_APPLICABILITY_PATH,
     CONSUMERS_CONTENT_APPLICABILITY_PATH,
@@ -23,6 +18,11 @@ from pulp_smash.pulp2.constants import (
 )
 from pulp_smash.pulp2.utils import publish_repo, sync_repo
 
+from pulp_2_tests.constants import (
+    RPM_UNSIGNED_FEED_URL,
+    RPM_DATA,
+    RPM2_DATA,
+)
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_distributor, gen_repo
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 

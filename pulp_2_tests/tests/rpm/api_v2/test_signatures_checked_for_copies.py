@@ -26,18 +26,18 @@ import unittest
 from urllib.parse import urljoin
 
 from pulp_smash import api, config, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.constants import PULP_FIXTURES_KEY_ID
+from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
+from pulp_smash.pulp2.utils import upload_import_unit
+
+from pulp_2_tests.constants import (
     DRPM_SIGNED_URL,
     DRPM_UNSIGNED_URL,
-    PULP_FIXTURES_KEY_ID,
     RPM_SIGNED_URL,
     RPM_UNSIGNED_URL,
     SRPM_SIGNED_URL,
     SRPM_UNSIGNED_URL,
 )
-from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import upload_import_unit
-
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import check_issue_3875, set_up_module
 

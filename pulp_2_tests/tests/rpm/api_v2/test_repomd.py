@@ -8,10 +8,10 @@ import unittest
 from urllib.parse import urljoin
 
 from pulp_smash import api, cli, config, selectors, utils
-from pulp_smash.constants import RPM_NAMESPACES, RPM_UNSIGNED_FEED_URL
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import BaseAPITestCase, publish_repo, sync_repo
 
+from pulp_2_tests.constants import RPM_NAMESPACES, RPM_UNSIGNED_FEED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,

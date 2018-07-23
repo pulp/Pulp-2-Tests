@@ -9,14 +9,14 @@ from urllib.parse import urljoin, urlparse
 import requests
 from packaging.version import Version
 from pulp_smash import api, config, exceptions, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.pulp2.constants import REPOSITORY_PATH
+from pulp_smash.pulp2.utils import BaseAPITestCase, search_units, sync_repo
+
+from pulp_2_tests.constants import (
     FILE_FEED_URL,
     FILE_MIXED_FEED_URL,
     FILE2_FEED_URL,
 )
-from pulp_smash.pulp2.constants import REPOSITORY_PATH
-from pulp_smash.pulp2.utils import BaseAPITestCase, search_units, sync_repo
-
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
 

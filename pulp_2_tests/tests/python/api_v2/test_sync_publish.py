@@ -6,7 +6,7 @@ from os.path import basename
 from urllib.parse import urljoin, urlparse
 
 from packaging.version import Version
-from pulp_smash import api, config, constants, selectors, utils
+from pulp_smash import api, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH, ORPHANS_PATH
 from pulp_smash.pulp2.utils import (
     publish_repo,
@@ -15,6 +15,11 @@ from pulp_smash.pulp2.utils import (
     upload_import_unit,
 )
 
+from pulp_2_tests.constants import (
+    PYTHON_EGG_URL,
+    PYTHON_PYPI_FEED_URL,
+    PYTHON_WHEEL_URL,
+)
 from pulp_2_tests.tests.python.api_v2.utils import gen_distributor, gen_repo
 from pulp_2_tests.tests.python.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 from pulp_2_tests.tests.python.utils import skip_if
@@ -134,7 +139,7 @@ class SyncTestCase(BaseTestCase):
         client = api.Client(self.cfg, api.json_handler)
         body = gen_repo()
         body['importer_config'] = {
-            'feed': constants.PYTHON_PYPI_FEED_URL,
+            'feed': PYTHON_PYPI_FEED_URL,
             'package_names': 'shelf-reader',
         }
         body['distributors'] = [gen_distributor()]
@@ -179,8 +184,8 @@ class UploadTestCase(BaseTestCase):
                 'unit_type_id': 'python_package',
             }, repo)
 
-        _upload_import_unit(constants.PYTHON_EGG_URL)
-        _upload_import_unit(constants.PYTHON_WHEEL_URL)
+        _upload_import_unit(PYTHON_EGG_URL)
+        _upload_import_unit(PYTHON_WHEEL_URL)
         with self.subTest(comment='verify content units are present'):
             self.verify_package_types(self.cfg, repo)
         repo = get_details(self.cfg, repo)

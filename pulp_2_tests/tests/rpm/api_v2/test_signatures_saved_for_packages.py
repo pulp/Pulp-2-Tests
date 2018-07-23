@@ -20,12 +20,15 @@ import unittest
 from urllib.parse import urlparse
 
 from pulp_smash import api, config, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.constants import PULP_FIXTURES_KEY_ID
+from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
+from pulp_smash.pulp2.utils import search_units, sync_repo, upload_import_unit
+
+from pulp_2_tests.constants import (
     DRPM_SIGNED_FEED_URL,
     DRPM_SIGNED_URL,
     DRPM_UNSIGNED_FEED_URL,
     DRPM_UNSIGNED_URL,
-    PULP_FIXTURES_KEY_ID,
     RPM_SIGNED_FEED_URL,
     RPM_SIGNED_URL,
     RPM_UNSIGNED_FEED_URL,
@@ -35,9 +38,6 @@ from pulp_smash.constants import (
     SRPM_UNSIGNED_FEED_URL,
     SRPM_UNSIGNED_URL,
 )
-from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import search_units, sync_repo, upload_import_unit
-
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import check_issue_2620
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import

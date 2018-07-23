@@ -29,10 +29,10 @@ import unittest
 
 from packaging.version import Version
 from pulp_smash import api, cli, config, selectors, utils
-from pulp_smash.constants import RPM, RPM_SIGNED_FEED_URL, RPM_SIGNED_URL
 from pulp_smash.pulp2.constants import PULP_SERVICES, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import get_broker, publish_repo, sync_repo
 
+from pulp_2_tests.constants import RPM, RPM_SIGNED_FEED_URL, RPM_SIGNED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,

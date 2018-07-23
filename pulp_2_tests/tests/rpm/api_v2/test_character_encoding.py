@@ -8,10 +8,10 @@ sequences are encountered.
 import unittest
 
 from pulp_smash import api, config, selectors, utils
-from pulp_smash.constants import RPM_WITH_NON_ASCII_URL, RPM_WITH_NON_UTF_8_URL
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import upload_import_unit
 
+from pulp_2_tests.constants import RPM_WITH_NON_ASCII_URL, RPM_WITH_NON_UTF_8_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
@@ -22,7 +22,7 @@ class UploadNonAsciiTestCase(unittest.TestCase):
     Specifically, do the following:
 
     1. Create an RPM repository.
-    2. Upload and import ``pulp_smash.constants.RPM_WITH_NON_ASCII_URL``
+    2. Upload and import ``pulp_2_tests.constants.RPM_WITH_NON_ASCII_URL``
        into the repository.
     """
 
@@ -42,7 +42,7 @@ class UploadNonUtf8TestCase(unittest.TestCase):
     Specifically, do the following:
 
     1. Create an RPM repository.
-    2. Upload and import ``pulp_smash.constants.RPM_WITH_NON_UTF_8_URL``
+    2. Upload and import ``pulp_2_tests.constants.RPM_WITH_NON_UTF_8_URL``
        into the repository.
 
     This test case targets `Pulp #1903 <https://pulp.plan.io/issues/1903>`_.

@@ -10,8 +10,9 @@ from xml.etree import ElementTree
 
 from packaging.version import Version
 from pulp_smash import api, cli, exceptions, selectors, utils
-from pulp_smash.constants import RPM_NAMESPACES
 from pulp_smash.pulp2.utils import search_units
+
+from pulp_2_tests.constants import RPM_NAMESPACES
 
 
 def gen_repo(**kwargs):

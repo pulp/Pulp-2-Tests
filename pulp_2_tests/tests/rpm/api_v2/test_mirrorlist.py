@@ -17,17 +17,17 @@ import unittest
 
 from packaging.version import Version
 from pulp_smash import api, config, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.exceptions import TaskReportError
+from pulp_smash.pulp2.utils import publish_repo, sync_repo
+from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
+
+from pulp_2_tests.constants import (
     RPM,
     RPM_MIRRORLIST_BAD,
     RPM_MIRRORLIST_GOOD,
     RPM_MIRRORLIST_MIXED,
     RPM_UNSIGNED_URL,
 )
-from pulp_smash.exceptions import TaskReportError
-from pulp_smash.pulp2.utils import publish_repo, sync_repo
-from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,

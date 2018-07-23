@@ -44,18 +44,6 @@ from xml.etree import ElementTree
 
 from packaging.version import Version
 from pulp_smash import api, config, selectors, utils
-from pulp_smash.constants import (
-    OPENSUSE_FEED_URL,
-    RPM,
-    RPM_DATA,
-    RPM_ERRATUM_ID,
-    RPM_ERRATUM_RPM_NAME,
-    RPM_NAMESPACES,
-    RPM_PKGLISTS_UPDATEINFO_FEED_URL,
-    RPM_SIGNED_FEED_URL,
-    RPM_UNSIGNED_FEED_URL,
-    RPM_UNSIGNED_URL,
-)
 from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     BaseAPITestCase,
@@ -67,6 +55,18 @@ from pulp_smash.pulp2.utils import (
 )
 from requests.exceptions import HTTPError
 
+from pulp_2_tests.constants import (
+    OPENSUSE_FEED_URL,
+    RPM,
+    RPM_DATA,
+    RPM_ERRATUM_ID,
+    RPM_ERRATUM_RPM_NAME,
+    RPM_NAMESPACES,
+    RPM_PKGLISTS_UPDATEINFO_FEED_URL,
+    RPM_SIGNED_FEED_URL,
+    RPM_UNSIGNED_FEED_URL,
+    RPM_UNSIGNED_URL,
+)
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
@@ -370,9 +370,9 @@ class UpdateRepoTestCase(BaseAPITestCase):
         verify that:
 
         * An ``<update>`` with an ``<id>`` of
-          ``pulp_smash.constants.RPM_ERRATUM_ID`` is present, and
+          ``pulp_2_tests.constants.RPM_ERRATUM_ID`` is present, and
         * one of its child ``<package>`` elements has a "name" attribute equal
-          to ``pulp_smash.constants.RPM_ERRATUM_RPM_NAME``.
+          to ``pulp_2_tests.constants.RPM_ERRATUM_RPM_NAME``.
         """
         sync_repo(self.cfg, self.repo)
         publish_repo(self.cfg, self.repo)
@@ -394,7 +394,7 @@ class UpdateRepoTestCase(BaseAPITestCase):
         """Unassociate a content unit and publish the repository.
 
         Fetch ``updateinfo.xml``. Verify that an ``<update>`` with an ``<id>``
-        of ``pulp_smash.constants.RPM_ERRATUM_ID`` is not present.
+        of ``pulp_2_tests.constants.RPM_ERRATUM_ID`` is not present.
         """
         client = api.Client(self.cfg, api.json_handler)
         client.post(urljoin(self.repo['_href'], 'actions/unassociate/'), {
@@ -420,7 +420,7 @@ class PkglistsTestCase(unittest.TestCase):
         Specifically, do the following:
 
         1. Create, sync and publish an RPM repository whose feed is set to
-           ``pulp_smash.constants.RPM_PKGLISTS_UPDATEINFO_FEED_URL``.
+           ``pulp_2_tests.constants.RPM_PKGLISTS_UPDATEINFO_FEED_URL``.
         2. Fetch and parse the published repository's ``updateinfo.xml`` file.
 
         Verify that the ``updateinfo.xml`` file has three packages whose
@@ -583,7 +583,7 @@ class OpenSuseErrataTestCase(unittest.TestCase):
     Do the following:
 
     1. Create, sync and publish a repository. Let its feed URL reference
-       ``pulp_smash.constants.OPENSUSE_FEED_URL``. Also, let it have an "on
+       ``pulp_2_tests.constants.OPENSUSE_FEED_URL``. Also, let it have an "on
        demand" download policy, so that time isn't spent syncing a potentially
        large amount of data.
     2. Download the published errata, and make it available to the remaining

@@ -5,9 +5,9 @@ import json
 import unittest
 
 from pulp_smash import api, config, selectors
-from pulp_smash.constants import DOCKER_V2_FEED_URL
 from pulp_smash.pulp2.utils import pulp_admin_login, upload_import_unit
 
+from pulp_2_tests.constants import DOCKER_V2_FEED_URL
 from pulp_2_tests.tests.docker.api_v2.utils import SyncPublishMixin
 from pulp_2_tests.tests.docker.utils import (
     get_upstream_name,

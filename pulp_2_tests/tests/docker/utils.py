@@ -7,11 +7,12 @@ from unittest import SkipTest
 
 from packaging.version import Version
 from pulp_smash import cli, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.pulp2 import utils as pulp2_utils
+
+from pulp_2_tests.constants import (
     DOCKER_UPSTREAM_NAME,
     DOCKER_UPSTREAM_NAME_NOLIST,
 )
-from pulp_smash.pulp2 import utils as pulp2_utils
 
 
 def set_up_module():
@@ -25,9 +26,9 @@ def set_up_module():
 def get_upstream_name(cfg):
     """Return a Docker upstream name.
 
-    Return ``pulp_smash.constants.DOCKER_UPSTREAM_NAME_NOLIST`` if Pulp is
+    Return ``pulp_2_tests.constants.DOCKER_UPSTREAM_NAME_NOLIST`` if Pulp is
     older than version 2.14. Otherwise, return
-    ``pulp_smash.constants.DOCKER_UPSTREAM_NAME``. See the documentation
+    ``pulp_2_tests.constants.DOCKER_UPSTREAM_NAME``. See the documentation
     for those constants for more information.
     """
     if cfg.pulp_version < Version('2.14'):

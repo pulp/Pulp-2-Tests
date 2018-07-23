@@ -3,10 +3,10 @@ import unittest
 from urllib.parse import urljoin
 
 from pulp_smash import api, cli, config, selectors
-from pulp_smash.constants import RPM_LARGE_UPDATEINFO, RPM_UNSIGNED_FEED_URL
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import publish_repo, sync_repo
 
+from pulp_2_tests.constants import RPM_LARGE_UPDATEINFO, RPM_UNSIGNED_FEED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
@@ -123,7 +123,7 @@ class LargePackageListTestCase(unittest.TestCase):
         Do the following:
 
         1. Create two repositories, each with a feed URL of
-           ``pulp_smash.constants.RPM_LARGE_UPDATEINFO``.
+           ``pulp_2_tests.constants.RPM_LARGE_UPDATEINFO``.
         2. Sync both repositories. Assert that each sync finishes without
            errors.
         """

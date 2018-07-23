@@ -6,14 +6,14 @@ import unittest
 from urllib.parse import urljoin, urlparse, urlsplit
 
 from pulp_smash import api, cli, config, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.pulp2.constants import REPOSITORY_PATH
+from pulp_smash.pulp2.utils import publish_repo, sync_repo, upload_import_unit
+
+from pulp_2_tests.constants import (
     FILE_FEED_COUNT,
     FILE_FEED_URL,
     FILE_URL,
 )
-from pulp_smash.pulp2.constants import REPOSITORY_PATH
-from pulp_smash.pulp2.utils import publish_repo, sync_repo, upload_import_unit
-
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     TemporaryUserMixin,
     get_dists_by_type_id,
@@ -132,7 +132,7 @@ class UploadIsoTestCase(unittest.TestCase):
         Specifically, do the following:
 
         1. Create an ISO repository.
-        2. Upload ``pulp_smash.constants.FILE_URL`` to the repository.
+        2. Upload ``pulp_2_tests.constants.FILE_URL`` to the repository.
         3. Publish the repository.
         4. Download the published ISO, and assert it's equal to the uploaded
            ISO.

@@ -18,15 +18,15 @@ import unittest
 from urllib.parse import urljoin
 
 from pulp_smash import api
-from pulp_smash.constants import (
+from pulp_smash.pulp2.constants import CONTENT_UNITS_PATH, REPOSITORY_PATH
+from pulp_smash.pulp2.utils import BaseAPITestCase, sync_repo
+
+from pulp_2_tests.constants import (
     RPM,
     RPM_SIGNED_FEED_URL,
     SRPM,
     SRPM_SIGNED_FEED_URL,
 )
-from pulp_smash.pulp2.constants import CONTENT_UNITS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import BaseAPITestCase, sync_repo
-
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import check_issue_2620
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
@@ -85,7 +85,7 @@ class SearchForRpmTestCase(BaseSearchTestCase):
         """Search for all "rpm" units.
 
         Perform the following searches. Assert a unit with filename
-        ``pulp_smash.constants.RPM`` is in the search results.
+        ``pulp_2_tests.constants.RPM`` is in the search results.
 
         ==== ====================
         GET  n/a
@@ -107,7 +107,7 @@ class SearchForRpmTestCase(BaseSearchTestCase):
         """Search for all "rpm" units, and include repos in the results.
 
         Perform the following searches. Assert a unit with filename
-        ``pulp_smash.constants.RPM`` is in the search results, and assert
+        ``pulp_2_tests.constants.RPM`` is in the search results, and assert
         it belongs to the repository created in
         :meth:`BaseSearchTestCase.setUpClass`.
 
@@ -141,7 +141,7 @@ class SearchForSrpmTestCase(BaseSearchTestCase):
         """Search for all "srpm" units.
 
         Perform the following searches. Assert a unit with filename
-        ``pulp_smash.constants.SRPM`` is in the search results.
+        ``pulp_2_tests.constants.SRPM`` is in the search results.
 
         ==== ====================
         GET  n/a
@@ -163,7 +163,7 @@ class SearchForSrpmTestCase(BaseSearchTestCase):
         """Search for all "srpm" units, and include repos in the results.
 
         Perform the following searches. Assert a unit with filename
-        ``pulp_smash.constants.SRPM`` is in the search results, and assert
+        ``pulp_2_tests.constants.SRPM`` is in the search results, and assert
         it belongs to the repository created in
         :meth:`BaseSearchTestCase.setUpClass`.
 

@@ -10,7 +10,6 @@ from urllib.parse import urljoin
 
 from requests.exceptions import HTTPError
 from pulp_smash import api, cli, config, selectors
-from pulp_smash.constants import RPM_MIRRORLIST_LARGE, RPM_UNSIGNED_FEED_URL
 from pulp_smash.pulp2.constants import (
     PULP_SERVICES,
     REPOSITORY_PATH,
@@ -18,6 +17,7 @@ from pulp_smash.pulp2.constants import (
 )
 from pulp_smash.pulp2.utils import get_broker, reset_pulp, sync_repo
 
+from pulp_2_tests.constants import RPM_MIRRORLIST_LARGE, RPM_UNSIGNED_FEED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_distributor, gen_repo
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
@@ -37,7 +37,7 @@ class MissingWorkersTestCase(unittest.TestCase):
        For details, see `Pulp #2835`_.) This should cause the first sync to
        abort.
     4. Update the repository. Let its feed reference a small repository. (For
-       example, ``pulp_smash.constants.RPM_UNSIGNED_FEED_URL``.)
+       example, ``pulp_2_tests.constants.RPM_UNSIGNED_FEED_URL``.)
     5. Start a sync. Verify that it completes. If `Pulp #2835`_ still affects
        Pulp, then the worker will be broken, and the sync will never start.
 

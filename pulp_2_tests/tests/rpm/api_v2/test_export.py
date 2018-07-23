@@ -13,7 +13,6 @@ from xml.dom import minidom
 from dateutil.parser import parse
 from packaging.version import Version
 from pulp_smash import api, cli, config, selectors, utils
-from pulp_smash.constants import RPM, RPM_SIGNED_FEED_URL, RPM_SIGNED_URL
 from pulp_smash.pulp2.constants import (
     REPOSITORY_EXPORT_DISTRIBUTOR,
     REPOSITORY_GROUP_EXPORT_DISTRIBUTOR,
@@ -22,6 +21,7 @@ from pulp_smash.pulp2.constants import (
 )
 from pulp_smash.pulp2.utils import BaseAPITestCase, publish_repo, sync_repo
 
+from pulp_2_tests.constants import RPM, RPM_SIGNED_FEED_URL, RPM_SIGNED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     DisableSELinuxMixin,
     gen_distributor,
@@ -462,7 +462,7 @@ class ExportDistributorTestCase(ExportDirMixin, BaseAPITestCase):
     def test_publish_to_dir(self):
         """Publish the repository to a directory on the Pulp server.
 
-        gerify that ``pulp_smash.constants.RPM`` is present and has a
+        gerify that ``pulp_2_tests.constants.RPM`` is present and has a
         correct checksum.
 
         This test is skipped if selinux is installed and enabled on the target

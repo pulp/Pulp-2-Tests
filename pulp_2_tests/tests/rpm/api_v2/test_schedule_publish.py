@@ -8,10 +8,10 @@ import time
 from urllib.parse import urljoin
 
 from pulp_smash import api, utils
-from pulp_smash.constants import RPM_SIGNED_FEED_URL
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import BaseAPITestCase, sync_repo
 
+from pulp_2_tests.constants import RPM_SIGNED_FEED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo, gen_distributor
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 

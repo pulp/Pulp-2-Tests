@@ -12,10 +12,11 @@ import unittest
 from urllib.parse import urljoin
 
 from packaging.version import Version
-from pulp_smash import api, config, constants, selectors, utils
+from pulp_smash import api, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import publish_repo, upload_import_unit
 
+from pulp_2_tests.constants import RPM_UNSIGNED_URL
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_distributor, gen_repo
 
@@ -48,7 +49,7 @@ class RepoviewTestCase(unittest.TestCase):
         body['distributors'] = [gen_distributor()]
         repo = client.post(REPOSITORY_PATH, body).json()
         self.addCleanup(client.delete, repo['_href'])
-        rpm = utils.http_get(constants.RPM_UNSIGNED_URL)
+        rpm = utils.http_get(RPM_UNSIGNED_URL)
         upload_import_unit(cfg, rpm, {'unit_type_id': 'rpm'}, repo)
 
         # Get info about the repo distributor

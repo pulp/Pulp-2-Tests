@@ -16,7 +16,11 @@ from urllib.parse import urljoin
 
 from packaging.version import Version
 from pulp_smash import api, config, exceptions, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
+from pulp_smash.pulp2.utils import BaseAPITestCase, publish_repo, sync_repo
+from requests.exceptions import HTTPError
+
+from pulp_2_tests.constants import (
     DRPM_UNSIGNED_FEED_URL,
     RPM,
     RPM_ERRATUM_COUNT,
@@ -31,10 +35,6 @@ from pulp_smash.constants import (
     RPM_UNSIGNED_URL,
     SRPM_SIGNED_FEED_URL,
 )
-from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import BaseAPITestCase, publish_repo, sync_repo
-from requests.exceptions import HTTPError
-
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,

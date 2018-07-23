@@ -13,7 +13,16 @@ import unittest
 from urllib.parse import urljoin
 
 from pulp_smash import api, config, exceptions, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
+from pulp_smash.pulp2.utils import (
+    BaseAPITestCase,
+    publish_repo,
+    search_units,
+    sync_repo,
+    upload_import_unit,
+)
+
+from pulp_2_tests.constants import (
     DRPM,
     DRPM_UNSIGNED_URL,
     RPM,
@@ -26,15 +35,6 @@ from pulp_smash.constants import (
     SRPM,
     SRPM_UNSIGNED_URL,
 )
-from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import (
-    BaseAPITestCase,
-    publish_repo,
-    search_units,
-    sync_repo,
-    upload_import_unit,
-)
-
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
@@ -363,7 +363,7 @@ class UploadRpmTestCase(BaseAPITestCase):
                 )
 
     def verify_repo_download(self, repo):
-        """Download ``pulp_smash.constants.RPM` from the given ``repo``.
+        """Download ``pulp_2_tests.constants.RPM` from the given ``repo``.
 
         Verify that it is exactly equal to the one uploaded earlier.
         """

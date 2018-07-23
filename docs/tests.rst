@@ -6,6 +6,7 @@ Location: :doc:`/index` → :doc:`/tests`
 .. toctree::
 
     tests/pulp_2_tests
+    tests/pulp_2_tests.constants
     tests/pulp_2_tests.tests
     tests/pulp_2_tests.tests.docker
     tests/pulp_2_tests.tests.docker.api_v2

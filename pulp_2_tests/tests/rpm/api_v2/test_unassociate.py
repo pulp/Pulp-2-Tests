@@ -12,14 +12,6 @@ from urllib.parse import urljoin
 from dateutil.parser import parse
 from packaging.version import Version
 from pulp_smash import api, config, selectors, utils
-from pulp_smash.constants import (
-    DRPM_UNSIGNED_FEED_URL,
-    RPM,
-    RPM_UNSIGNED_FEED_COUNT,
-    RPM_UNSIGNED_FEED_URL,
-    RPM_UNSIGNED_URL,
-    SRPM_UNSIGNED_FEED_URL,
-)
 from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     BaseAPITestCase,
@@ -29,6 +21,14 @@ from pulp_smash.pulp2.utils import (
     upload_import_unit,
 )
 
+from pulp_2_tests.constants import (
+    DRPM_UNSIGNED_FEED_URL,
+    RPM,
+    RPM_UNSIGNED_FEED_COUNT,
+    RPM_UNSIGNED_FEED_URL,
+    RPM_UNSIGNED_URL,
+    SRPM_UNSIGNED_FEED_URL,
+)
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_distributor, gen_repo
 from pulp_2_tests.tests.rpm.utils import check_issue_2620
 from pulp_2_tests.tests.rpm.utils import set_up_module

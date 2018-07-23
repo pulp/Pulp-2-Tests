@@ -9,14 +9,6 @@ from urllib.parse import urljoin
 
 from packaging.version import Version
 from pulp_smash import api, config, exceptions, selectors, utils
-from pulp_smash.constants import (
-    PUPPET_FEED_2,
-    PUPPET_MODULE_1,
-    PUPPET_MODULE_2,
-    PUPPET_MODULE_URL_1,
-    PUPPET_MODULE_URL_2,
-    PUPPET_QUERY_2,
-)
 from pulp_smash.pulp2.constants import (
     CALL_REPORT_KEYS,
     CONTENT_UPLOAD_PATH,
@@ -31,6 +23,14 @@ from pulp_smash.pulp2.utils import (
 )
 from requests.exceptions import HTTPError
 
+from pulp_2_tests.constants import (
+    PUPPET_FEED_2,
+    PUPPET_MODULE_1,
+    PUPPET_MODULE_2,
+    PUPPET_MODULE_URL_1,
+    PUPPET_MODULE_URL_2,
+    PUPPET_QUERY_2,
+)
 from pulp_2_tests.tests.puppet.api_v2.utils import gen_distributor, gen_repo
 from pulp_2_tests.tests.puppet.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
@@ -97,7 +97,7 @@ class SyncValidFeedTestCase(BaseAPITestCase):
         Assert that:
 
         * None of the sync tasks has an error message.
-        * Searching for module ``pulp_smash.constants.PUPPET_MODULE_2``
+        * Searching for module ``pulp_2_tests.constants.PUPPET_MODULE_2``
           yields one result.
         * The synced-in module can be downloaded.
         """
@@ -145,7 +145,7 @@ class SyncValidFeedTestCase(BaseAPITestCase):
         Assert that:
 
         * None of the sync tasks has an error message.
-        * Searching for module ``pulp_smash.constants.PUPPET_MODULE_2``
+        * Searching for module ``pulp_2_tests.constants.PUPPET_MODULE_2``
           yields no results.
         """
         # Create and sync a repository.

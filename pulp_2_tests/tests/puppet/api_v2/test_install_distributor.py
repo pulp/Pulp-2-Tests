@@ -9,7 +9,6 @@ For more information check `puppet_install_distributor`_
 from requests.exceptions import HTTPError
 
 from pulp_smash import api, cli, utils, selectors
-from pulp_smash.constants import PUPPET_MODULE_1, PUPPET_MODULE_URL_1
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     BaseAPITestCase,
@@ -17,6 +16,7 @@ from pulp_smash.pulp2.utils import (
     upload_import_unit,
 )
 
+from pulp_2_tests.constants import PUPPET_MODULE_1, PUPPET_MODULE_URL_1
 from pulp_2_tests.tests.puppet.utils import os_is_f27
 from pulp_2_tests.tests.puppet.api_v2.utils import (
     gen_install_distributor,

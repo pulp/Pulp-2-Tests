@@ -58,15 +58,15 @@ from urllib.parse import urljoin, urlparse
 
 from requests.exceptions import HTTPError
 from pulp_smash import api, cli, config, selectors, utils
-from pulp_smash.constants import (
+from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
+from pulp_smash.pulp2.utils import publish_repo, sync_repo, upload_import_unit
+
+from pulp_2_tests.constants import (
     RPM2_UNSIGNED_URL,
     RPM_SIGNED_FEED_COUNT,
     RPM_SIGNED_FEED_URL,
     RPM_UNSIGNED_URL,
 )
-from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import publish_repo, sync_repo, upload_import_unit
-
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     DisableSELinuxMixin,
     TemporaryUserMixin,
@@ -210,7 +210,7 @@ class _RsyncDistUtilsMixin():  # pylint:disable=too-few-public-methods
             distributor.
         :param num_units: The number of units that should be on the target
             system's filesystem. Defaults to
-            ``pulp_smash.constants.RPM_SIGNED_FEED_COUNT`.
+            ``pulp_2_tests.constants.RPM_SIGNED_FEED_COUNT`.
         :returns: Nothing.
         """
         if num_units is None:
