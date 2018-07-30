@@ -4,6 +4,9 @@ python:
 - 3.4
 - 3.5
 - 3.6
+env:
+- PULP_SMASH_NAME=pulp-smash
+- PULP_SMASH_NAME=git+https://github.com/PulpQE/pulp-smash.git#egg=pulp-smash
 # Python 3.7+ is only available on Xenial, due to dependency requirements. For
 # these builds, "sudo" must be enabled, or else Trusty will be used.
 matrix:
@@ -11,9 +14,17 @@ matrix:
   - python: 3.7
     dist: xenial
     sudo: required
+    env:
+    - PULP_SMASH_NAME=pulp-smash
+  - python: 3.7
+    dist: xenial
+    sudo: required
+    env:
+    - PULP_SMASH_NAME=git+https://github.com/PulpQE/pulp-smash.git#egg=pulp-smash
 install:
 # Old versions of pip can't handle extras_require in setup.py.
 - pip install --upgrade pip
+- pip install "$PULP_SMASH_NAME"
 - pip install .[dev]
 script: make all
 cache: pip
