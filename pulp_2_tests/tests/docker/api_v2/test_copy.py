@@ -106,7 +106,11 @@ class CopyV2ContentTestCase(unittest.TestCase):
         """Copy tags from one repository to another.
 
         Assert the same number of tags are present in both repositories.
+
+        This test targets `Pulp #3892 <https://pulp.plan.io/issues/3892>`_.
         """
+        if not selectors.bug_is_fixed(3892, self.cfg.pulp_version):
+            self.skipTest('https://pulp.plan.io/issues/3892')
         client = api.Client(self.cfg, api.json_handler)
         repo = client.post(REPOSITORY_PATH, gen_repo())
         self.addCleanup(client.delete, repo['_href'])
@@ -148,8 +152,9 @@ class CopyV2ContentTestCase(unittest.TestCase):
 
         * `Pulp #2384 <https://pulp.plan.io/issues/2384>`_
         * `Pulp #2385 <https://pulp.plan.io/issues/2385>`_
+        * `Pulp #3892 <https://pulp.plan.io/issues/3892>`_
         """
-        for issue_id in (2384, 2385):
+        for issue_id in (2384, 2385, 3892):
             if not selectors.bug_is_fixed(issue_id, self.cfg.pulp_version):
                 self.skipTest(
                     'https://pulp.plan.io/issues/{}'.format(issue_id)
