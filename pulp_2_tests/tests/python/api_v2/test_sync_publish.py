@@ -129,6 +129,7 @@ class SyncTestCase(BaseTestCase):
 
         * `Pulp #135 <https://pulp.plan.io/issues/135>`_
         * `Pulp #3578 <https://pulp.plan.io/issues/3578>`_
+        * `Pulp #3769 <https://pulp.plan.io/issues/3769>`_
         * `Pulp Smash #494 <https://github.com/PulpQE/pulp-smash/issues/494>`_
         """
         if (self.cfg.pulp_version < Version('2.17') or
@@ -136,6 +137,10 @@ class SyncTestCase(BaseTestCase):
             self.skipTest('https://pulp.plan.io/issues/3578')
         if not selectors.bug_is_fixed(135, self.cfg.pulp_version):
             self.skipTest('https://pulp.plan.io/issues/135')
+        if (utils.fips_is_supported(self.cfg) and
+                utils.fips_is_enabled(self.cfg) and
+                not selectors.bug_is_fixed(3769, self.cfg.pulp_version)):
+            self.skipTest('https://pulp.plan.io/issues/3769')
         client = api.Client(self.cfg, api.json_handler)
         body = gen_repo()
         body['importer_config'] = {
