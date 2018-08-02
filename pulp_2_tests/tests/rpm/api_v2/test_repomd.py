@@ -9,69 +9,76 @@ from urllib.parse import urljoin
 
 from pulp_smash import api, cli, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
-from pulp_smash.pulp2.utils import BaseAPITestCase, publish_repo, sync_repo
+from pulp_smash.pulp2.utils import publish_repo, sync_repo
 
 from pulp_2_tests.constants import RPM_NAMESPACES, RPM_UNSIGNED_FEED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
+    get_repodata_repomd_xml,
     xml_handler,
 )
-from pulp_2_tests.tests.rpm.utils import check_issue_2277, check_issue_3104
+from pulp_2_tests.tests.rpm.utils import (
+    check_issue_2277,
+    check_issue_3104,
+    skip_if,
+)
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
 
-class RepoMDTestCase(BaseAPITestCase):
+class RepoMDTestCase(unittest.TestCase):
     """Tests to ensure ``repomd.xml`` can be created and is valid."""
 
     @classmethod
     def setUpClass(cls):
-        """Generate, fetch and parse a ``repomd.xml`` file.
-
-        Do the following:
-
-        1. Create an RPM repository with a YUM distributor and publish it.
-        2. Fetch the ``repomd.xml`` file from the distributor, and parse it.
-        """
-        super().setUpClass()
+        """Create shared class-wide variables."""
+        cls.cfg = config.get_config()
         if check_issue_3104(cls.cfg):
             raise unittest.SkipTest('https://pulp.plan.io/issues/3104')
         if check_issue_2277(cls.cfg):
             raise unittest.SkipTest('https://pulp.plan.io/issues/2277')
+        cls.repo = {}
+        cls.root_element = None
 
-        # Create a repository with a yum distributor and publish it.
-        client = api.Client(cls.cfg, api.json_handler)
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up class-wide resources."""
+        if cls.repo:
+            api.Client(cls.cfg).delete(cls.repo['_href'])
+
+    def test_01_set_up(self):
+        """Create and publish a repo, and fetch and parse its ``repomd.xml``."""
+        client = api.Client(self.cfg, api.json_handler)
         body = gen_repo()
         body['distributors'] = [gen_distributor()]
-        repo = client.post(REPOSITORY_PATH, body)
-        repo = client.get(repo['_href'], params={'details': True})
-        cls.resources.add(repo['_href'])
-        publish_repo(cls.cfg, repo)
-
-        # Fetch and parse repomd.xml
-        client.response_handler = xml_handler
-        path = urljoin(
-            '/pulp/repos/',
-            repo['distributors'][0]['config']['relative_url'],
+        self.repo.update(client.post(REPOSITORY_PATH, body))
+        self.repo.update(client.get(self.repo['_href'], params={'details': True}))
+        publish_repo(self.cfg, self.repo)
+        type(self).root_element = get_repodata_repomd_xml(
+            self.cfg,
+            self.repo['distributors'][0],
         )
-        path = urljoin(path, 'repodata/repomd.xml')
-        cls.root_element = client.get(path)
 
-    def test_tag(self):
+    @skip_if(bool, 'repo', False)
+    def test_02_tag(self):
         """Assert the XML tree's root element has the correct tag."""
-        xpath = '{{{}}}repomd'.format(RPM_NAMESPACES['metadata/repo'])
+        xpath = '{' + RPM_NAMESPACES['metadata/repo'] + '}repomd'
         self.assertEqual(self.root_element.tag, xpath)
 
-    def test_data(self):
+    @skip_if(bool, 'repo', False)
+    def test_02_data_elements(self):
         """Assert the tree's "data" elements have correct "type" attributes."""
-        xpath = '{{{}}}data'.format(RPM_NAMESPACES['metadata/repo'])
+        xpath = '{' + RPM_NAMESPACES['metadata/repo'] + '}data'
         data_elements = self.root_element.findall(xpath)
-        data_types = [element.get('type') for element in data_elements]
-        data_types.sort()
-        self.assertEqual(
-            data_types,
-            ['filelists', 'group', 'other', 'primary', 'updateinfo'],
-        )
+        data_types = {element.get('type') for element in data_elements}
+        expected_data_types = {
+            'filelists',
+            'group',
+            'other',
+            'primary',
+            'updateinfo',
+        }
+        self.assertEqual(data_types, expected_data_types)
 
 
 class FastForwardIntegrityTestCase(unittest.TestCase):
