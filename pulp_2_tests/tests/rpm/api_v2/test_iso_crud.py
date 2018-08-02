@@ -340,6 +340,8 @@ class PulpManifestTestCase(BaseAPITestCase):
         if self.cfg.pulp_version < Version('2.11'):
             self.skipTest(
                 'Pulp reports 404 for ISO repos only on 2.11 or greater.')
+        if not selectors.bug_is_fixed(3899, self.cfg.pulp_version):
+            self.skipTest('https://pulp.plan.io/issues/3899')
         pulp_manifest = self.parse_pulp_manifest(FILE_MIXED_FEED_URL)
         missing = [
             row['name'] for row in pulp_manifest
