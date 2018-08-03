@@ -8,7 +8,7 @@ from pulp_smash.pulp2.constants import PULP_SERVICES
 from pulp_smash.pulp2.utils import pulp_admin_login
 
 from pulp_2_tests.constants import RPM_UNSIGNED_FEED_URL
-from pulp_2_tests.tests.rpm.utils import set_up_module
+from pulp_2_tests.tests.rpm.utils import os_is_f27, set_up_module
 
 
 def setUpModule():  # pylint:disable=invalid-name
@@ -61,6 +61,8 @@ class MaxTasksPerChildTestCase(unittest.TestCase):
         if not selectors.bug_is_fixed(2172, cfg.pulp_version):
             self.skipTest('https://pulp.plan.io/issues/2172')
         pulp_3540_testable = selectors.bug_is_fixed(3540, cfg.pulp_version)
+        if os_is_f27(cfg) and not pulp_3540_testable:
+            self.skipTest('https://pulp.plan.io/issues/3540')
         svc_mgr = cli.GlobalServiceManager(cfg)
         sudo = () if cli.is_root(cfg) else ('sudo',)
         set_cmd = sudo + (
