@@ -33,7 +33,7 @@ class UploadManifestListV2TestCase(SyncPublishMixin, unittest.TestCase):
         if (os_is_f26(cls.cfg) and
                 not selectors.bug_is_fixed(3036, cls.cfg.pulp_version)):
             raise unittest.SkipTest('https://pulp.plan.io/issues/3036')
-        for issue_id in (2287, 2384, 2993):
+        for issue_id in (2287, 2384, 2993, 3904):
             if not selectors.bug_is_fixed(issue_id, cls.cfg.pulp_version):
                 raise unittest.SkipTest(
                     'https://pulp.plan.io/issues/{}'.format(issue_id)
