@@ -41,8 +41,6 @@ class BaseTestCase(unittest.TestCase):
     def setUpClass(cls):
         """Create class-wide variables."""
         cls.cfg = config.get_config()
-        if utils.fips_is_supported(cls.cfg) and utils.fips_is_enabled(cls.cfg):
-            raise unittest.SkipTest('https://pulp.plan.io/issues/3895')
         cls.repos = []
         if inspect.getmro(cls)[0] == BaseTestCase:
             raise unittest.SkipTest('Abstract base class.')
@@ -163,6 +161,16 @@ class SyncTestCase(BaseTestCase):
 
 class UploadTestCase(BaseTestCase):
     """Test whether content can be uploaded to a Python repository."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Skip this test if FIPS is supported and enabled.
+
+        See `Pulp #3895 <https://pulp.plan.io/issues/3895>`_.
+        """
+        super().setUpClass()
+        if utils.fips_is_supported(cls.cfg) and utils.fips_is_enabled(cls.cfg):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/3895')
 
     def test_01_first_repo(self):
         """Create, upload content into and publish a Python repository.
