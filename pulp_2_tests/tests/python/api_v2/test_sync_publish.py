@@ -41,6 +41,8 @@ class BaseTestCase(unittest.TestCase):
     def setUpClass(cls):
         """Create class-wide variables."""
         cls.cfg = config.get_config()
+        if utils.fips_is_supported(cls.cfg) and utils.fips_is_enabled(cls.cfg):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/3895')
         cls.repos = []
         if inspect.getmro(cls)[0] == BaseTestCase:
             raise unittest.SkipTest('Abstract base class.')

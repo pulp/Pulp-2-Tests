@@ -14,6 +14,7 @@ The second upload should silently fail for all Pulp releases in the 2.x series.
 .. _Pulp #1406: https://pulp.plan.io/issues/1406
 .. _Pulp Smash #81: https://github.com/PulpQE/pulp-smash/issues/81
 """
+import unittest
 from urllib.parse import urlsplit
 
 from packaging.version import Version
@@ -33,6 +34,8 @@ class DuplicateUploadsTestCase(BaseAPITestCase, DuplicateUploadsMixin):
     def setUpClass(cls):
         """Create a Python repo. Upload a Python package into it twice."""
         super().setUpClass()
+        if utils.fips_is_supported(cls.cfg) and utils.fips_is_enabled(cls.cfg):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/3895')
         unit = utils.http_get(PYTHON_EGG_URL)
         import_params = {'unit_key': {}, 'unit_type_id': 'python_package'}
         if cls.cfg.pulp_version >= Version('2.11'):
