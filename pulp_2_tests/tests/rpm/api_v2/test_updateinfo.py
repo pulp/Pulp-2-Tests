@@ -64,6 +64,7 @@ from pulp_2_tests.constants import (
     RPM_NAMESPACES,
     RPM_PKGLISTS_UPDATEINFO_FEED_URL,
     RPM_SIGNED_FEED_URL,
+    RPM_UNSIGNED_FEED_COUNT,
     RPM_UNSIGNED_FEED_URL,
     RPM_UNSIGNED_URL,
 )
@@ -533,7 +534,7 @@ class CleanUpTestCase(unittest.TestCase):
             units = (
                 search_units(self.cfg, self.repo, {'type_ids': ('rpm',)})
             )
-            self.assertEqual(len(units), 31)
+            self.assertEqual(len(units), RPM_UNSIGNED_FEED_COUNT - 1)
         with self.subTest(comment='check updateinfo.xml is available'):
             client.get(self.updateinfo_xml_hrefs[0])
 
@@ -548,7 +549,7 @@ class CleanUpTestCase(unittest.TestCase):
             units = (
                 search_units(self.cfg, self.repo, {'type_ids': ('rpm',)})
             )
-            self.assertEqual(len(units), 32)
+            self.assertEqual(len(units), RPM_UNSIGNED_FEED_COUNT)
         with self.subTest(comment='check updateinfo.xml has a new path'):
             # pylint:disable=no-value-for-parameter
             self.assertNotEqual(*self.updateinfo_xml_hrefs)
