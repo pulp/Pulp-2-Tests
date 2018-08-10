@@ -462,7 +462,7 @@ RPM_PKGLISTS_UPDATEINFO_FEED_URL = (
 )
 """A repository whose updateinfo file has multiple ``<pkglist>`` sections."""
 
-RPM_SIGNED_FEED_COUNT = 32
+RPM_SIGNED_FEED_COUNT = 34
 """The number of packages available at :data:`RPM_SIGNED_FEED_URL`."""
 
 RPM_SIGNED_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-signed/')
@@ -474,7 +474,7 @@ RPM_SIGNED_URL = urljoin(RPM_SIGNED_FEED_URL, RPM)
 Built from :data:`RPM_SIGNED_FEED_URL` and :data:`RPM`.
 """
 
-RPM_UNSIGNED_FEED_COUNT = 32
+RPM_UNSIGNED_FEED_COUNT = 34
 """The number of packages available at :data:`RPM_UNSIGNED_FEED_URL`."""
 
 RPM_UNSIGNED_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-unsigned/')
