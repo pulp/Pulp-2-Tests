@@ -59,7 +59,7 @@ class RetainOldCountTestCase(BaseAPITestCase):
         """
         repo = self.create_sync_repo(0)
         counts = [_['content_unit_counts']['rpm'] for _ in (self.repo, repo)]
-        self.assertEqual(counts[0] - 1, counts[1])
+        self.assertEqual(counts[0] - 3, counts[1])
 
     def test_retain_one(self):
         """Give ``retain_old_count`` a value of one.
