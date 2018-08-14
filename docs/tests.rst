@@ -77,6 +77,7 @@ Location: :doc:`/index` → :doc:`/tests`
     tests/pulp_2_tests.tests.rpm.api_v2.test_iso_crud
     tests/pulp_2_tests.tests.rpm.api_v2.test_iso_sync_publish
     tests/pulp_2_tests.tests.rpm.api_v2.test_mirrorlist
+    tests/pulp_2_tests.tests.rpm.api_v2.test_modularity
     tests/pulp_2_tests.tests.rpm.api_v2.test_no_op_publish
     tests/pulp_2_tests.tests.rpm.api_v2.test_orphan_remove
     tests/pulp_2_tests.tests.rpm.api_v2.test_package_paths
