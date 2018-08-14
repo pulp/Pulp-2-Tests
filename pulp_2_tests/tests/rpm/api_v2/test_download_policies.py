@@ -19,7 +19,12 @@ from pulp_smash.pulp2.utils import (
     sync_repo,
 )
 
-from pulp_2_tests.constants import RPM, RPM_SIGNED_FEED_URL, RPM_SIGNED_URL
+from pulp_2_tests.constants import (
+    RPM,
+    RPM_DATA,
+    RPM_SIGNED_FEED_URL,
+    RPM_SIGNED_URL,
+)
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
@@ -317,9 +322,9 @@ class FixFileCorruptionTestCase(BaseAPITestCase):
         """Assert all units are downloaded after download_repo finishes."""
         # Support for package langpacks has been added in Pulp 2.9. In earlier
         # versions, langpacks are ignored.
-        locally_stored_units = 39  # See repo['content_unit_counts']
-        if self.cfg.pulp_version >= Version('2.9'):
-            locally_stored_units += 1
+        locally_stored_units = RPM_DATA['metadata']['size']['installed']
+        if self.cfg.pulp_version < Version('2.9'):
+            locally_stored_units -= 1
         self.assertEqual(
             self.repo_post_download['locally_stored_units'],
             locally_stored_units,

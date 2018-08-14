@@ -19,7 +19,7 @@ from pulp_smash import api, config, selectors
 from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import sync_repo
 
-from pulp_2_tests.constants import RPM_SIGNED_FEED_URL
+from pulp_2_tests.constants import RPM_DATA, RPM_SIGNED_FEED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 from pulp_2_tests.tests.rpm.utils import skip_if
@@ -48,13 +48,13 @@ class OrphansTestCase(unittest.TestCase):
         Create, sync and delete an RPM repository. Doing this creates orphans
         that the test methods can make use of.
         """
-        cfg = config.get_config()
-        client = api.Client(cfg, api.json_handler)
+        cls.cfg = config.get_config()
+        client = api.Client(cls.cfg, api.json_handler)
         body = gen_repo()
         body['importer_config']['feed'] = RPM_SIGNED_FEED_URL
         repo = client.post(REPOSITORY_PATH, body)
         try:
-            sync_repo(cfg, repo)
+            sync_repo(cls.cfg, repo)
         finally:
             client.delete(repo['_href'])
         cls.orphans_available = False
@@ -69,10 +69,11 @@ class OrphansTestCase(unittest.TestCase):
         """
         orphans = api.Client(config.get_config()).get(ORPHANS_PATH).json()
         actual_count = _count_orphans(orphans)
-        # Support for langpack content units was added in Pulp 2.9.
-        expected_count = 39
-        if config.get_config().pulp_version >= Version('2.9'):
-            expected_count += 1
+        # Support for package langpacks has been added in Pulp 2.9. In earlier
+        # versions, langpacks are ignored.
+        expected_count = RPM_DATA['metadata']['size']['installed']
+        if self.cfg.pulp_version < Version('2.9'):
+            expected_count -= 1
         self.assertEqual(actual_count, expected_count, orphans)
         type(self).orphans_available = True
 
@@ -124,15 +125,14 @@ class OrphansTestCase(unittest.TestCase):
     @skip_if(bool, 'orphans_available', False)
     def test_03_delete_by_content_type(self):
         """Delete orphans by their content type."""
-        cfg = config.get_config()
-        client = api.Client(cfg, api.json_handler)
+        client = api.Client(self.cfg, api.json_handler)
         orphans_pre = client.get(ORPHANS_PATH)
         call_report = client.delete(urljoin(ORPHANS_PATH, 'erratum/'))
         orphans_post = client.get(ORPHANS_PATH)
         with self.subTest(comment='verify "result" field'):
-            if not selectors.bug_is_fixed(1268, cfg.pulp_version):
+            if not selectors.bug_is_fixed(1268, self.cfg.pulp_version):
                 self.skipTest('https://pulp.plan.io/issues/1268')
-            task = tuple(api.poll_spawned_tasks(cfg, call_report))[-1]
+            task = tuple(api.poll_spawned_tasks(self.cfg, call_report))[-1]
             self.assertIsInstance(task['result'], int)
             self.assertGreater(task['result'], 0)
         with self.subTest(comment='verify total count'):
@@ -146,11 +146,10 @@ class OrphansTestCase(unittest.TestCase):
 
     def test_04_delete_all(self):
         """Delete all orphans."""
-        cfg = config.get_config()
-        call_report = api.Client(cfg).delete(ORPHANS_PATH).json()
-        if not selectors.bug_is_fixed(1268, cfg.pulp_version):
+        call_report = api.Client(self.cfg).delete(ORPHANS_PATH).json()
+        if not selectors.bug_is_fixed(1268, self.cfg.pulp_version):
             self.skipTest('https://pulp.plan.io/issues/1268')
-        task = tuple(api.poll_spawned_tasks(cfg, call_report))[-1]
+        task = tuple(api.poll_spawned_tasks(self.cfg, call_report))[-1]
         self.assertIsInstance(task['result'], dict)
         self.assertGreater(sum(task['result'].values()), 0)
 
