@@ -38,6 +38,7 @@ Location: :doc:`/index` → :doc:`/tests`
     tests/pulp_2_tests.tests.platform.api_v2.test_repository
     tests/pulp_2_tests.tests.platform.api_v2.test_search
     tests/pulp_2_tests.tests.platform.api_v2.test_user
+    tests/pulp_2_tests.tests.platform.api_v2.utils
     tests/pulp_2_tests.tests.platform.cli
     tests/pulp_2_tests.tests.platform.cli.test_pulp_manage_db
     tests/pulp_2_tests.tests.platform.cli.test_selinux
