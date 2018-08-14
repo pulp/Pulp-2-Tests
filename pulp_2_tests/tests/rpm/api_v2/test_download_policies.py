@@ -317,7 +317,7 @@ class FixFileCorruptionTestCase(BaseAPITestCase):
         """Assert all units are downloaded after download_repo finishes."""
         # Support for package langpacks has been added in Pulp 2.9. In earlier
         # versions, langpacks are ignored.
-        locally_stored_units = 39  # See repo['content_unit_counts']
+        locally_stored_units = 41  # See repo['content_unit_counts']
         if self.cfg.pulp_version >= Version('2.9'):
             locally_stored_units += 1
         self.assertEqual(
