@@ -242,6 +242,7 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
             enabled=1,
             gpgcheck=0,
             metadata_expire=0,  # force metadata to load every time
+            name=repo_id,
             repositoryid=repo_id,
             sslverify='yes' if verify else 'no',
         )
