@@ -20,7 +20,7 @@ help:
 # is compiled, and Sphinx does not needlessly recompile.) More broadly, we
 # order dependencies by execution time and (anecdotal) likelihood of finding
 # issues.
-all: lint docs-clean docs-html dist-clean dist
+all: dist-clean lint docs-clean docs-html dist
 
 dist:
 	./setup.py --quiet sdist bdist_wheel --universal
@@ -42,7 +42,7 @@ lint: lint-flake8 lint-pylint
 
 # E501 and F401 are ignored because Pylint performs similar checks.
 lint-flake8:
-	flake8 . --ignore E501,F401 --exclude docs/_build
+	flake8 . --ignore E501,F401 --exclude docs/_build,build
 
 # Pulp 2 Test depends on Pulp Smash, and Pulp Smash should be considered a third
 # party library. It appears that when this dependency is satisfied by a local
