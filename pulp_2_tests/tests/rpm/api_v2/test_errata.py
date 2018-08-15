@@ -83,6 +83,7 @@ class ApplyErratumTestCase(unittest.TestCase):
                 'pulp/repos/',
                 repo['distributors'][0]['config']['relative_url']
             )),
+            name=repo['_href'],
             enabled=1,
             gpgcheck=0,
             metadata_expire=0,  # force metadata to load every time
