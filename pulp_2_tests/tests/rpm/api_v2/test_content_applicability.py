@@ -9,7 +9,7 @@ from types import MappingProxyType
 from urllib.parse import urljoin
 
 from jsonschema import validate
-from pulp_smash import api, config, utils
+from pulp_smash import api, config
 from pulp_smash.pulp2.constants import (
     CONSUMERS_ACTIONS_CONTENT_REGENERATE_APPLICABILITY_PATH,
     CONSUMERS_CONTENT_APPLICABILITY_PATH,
@@ -23,7 +23,11 @@ from pulp_2_tests.constants import (
     RPM_DATA,
     RPM2_DATA,
 )
-from pulp_2_tests.tests.rpm.api_v2.utils import gen_distributor, gen_repo
+from pulp_2_tests.tests.rpm.api_v2.utils import (
+    gen_consumer,
+    gen_distributor,
+    gen_repo,
+)
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
 # MappingProxyType is used to make an immutable dict.
@@ -135,12 +139,11 @@ class BasicTestCase(unittest.TestCase):
         """
         # Create a consumer.
         client = api.Client(self.cfg, api.json_handler)
-        consumer_id = utils.uuid4()
-        consumer = client.post(CONSUMERS_PATH, {'id': consumer_id})
+        consumer = client.post(CONSUMERS_PATH, gen_consumer())
         self.addCleanup(client.delete, consumer['consumer']['_href'])
 
         # Bind the consumer.
-        client.post(urljoin(CONSUMERS_PATH, consumer_id + '/bindings/'), {
+        client.post(urljoin(consumer['consumer']['_href'], 'bindings/'), {
             'distributor_id': self.repo['distributors'][0]['id'],
             'notify_agent': False,
             'repo_id': self.repo['id'],
@@ -151,7 +154,7 @@ class BasicTestCase(unittest.TestCase):
         rpm_with_erratum_metadata['version'] = '4.0'
         rpm_without_erratum_metadata = RPM_WITHOUT_ERRATUM_METADATA.copy()
         rpm_without_erratum_metadata['version'] = '0.0.1'
-        client.post(urljoin(CONSUMERS_PATH, consumer_id + '/profiles/'), {
+        client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
             'content_type': 'rpm',
             'profile': [
                 rpm_with_erratum_metadata,
@@ -161,12 +164,16 @@ class BasicTestCase(unittest.TestCase):
 
         # Regenerate applicability.
         client.post(CONSUMERS_ACTIONS_CONTENT_REGENERATE_APPLICABILITY_PATH, {
-            'consumer_criteria': {'filters': {'id': {'$in': [consumer_id]}}}
+            'consumer_criteria': {
+                'filters': {'id': {'$in': [consumer['consumer']['id']]}}
+            }
         })
 
         # Fetch applicability.
         applicability = client.post(CONSUMERS_CONTENT_APPLICABILITY_PATH, {
-            'criteria': {'filters': {'id': {'$in': [consumer_id]}}},
+            'criteria': {
+                'filters': {'id': {'$in': [consumer['consumer']['id']]}}
+            },
         })
         validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
         with self.subTest(comment='verify erratum listed in report'):
@@ -182,7 +189,10 @@ class BasicTestCase(unittest.TestCase):
                 applicability[0]['applicability']['rpm'],
             )
         with self.subTest(comment='verify consumers listed in report'):
-            self.assertEqual(applicability[0]['consumers'], [consumer_id])
+            self.assertEqual(
+                applicability[0]['consumers'],
+                [consumer['consumer']['id']],
+            )
 
     def test_negative(self):
         """Verify content isn't made available when appropriate.
@@ -192,19 +202,18 @@ class BasicTestCase(unittest.TestCase):
         """
         # Create a consumer.
         client = api.Client(self.cfg, api.json_handler)
-        consumer_id = utils.uuid4()
-        consumer = client.post(CONSUMERS_PATH, {'id': consumer_id})
+        consumer = client.post(CONSUMERS_PATH, gen_consumer())
         self.addCleanup(client.delete, consumer['consumer']['_href'])
 
         # Bind the consumer.
-        client.post(urljoin(CONSUMERS_PATH, consumer_id + '/bindings/'), {
+        client.post(urljoin(consumer['consumer']['_href'], 'bindings/'), {
             'distributor_id': self.repo['distributors'][0]['id'],
             'notify_agent': False,
             'repo_id': self.repo['id'],
         })
 
         # Create a consumer profile.
-        client.post(urljoin(CONSUMERS_PATH, consumer_id + '/profiles/'), {
+        client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
             'content_type': 'rpm',
             'profile': [
                 # The JSON serializer can't handle MappingProxyType objects.
@@ -215,16 +224,23 @@ class BasicTestCase(unittest.TestCase):
 
         # Regenerate applicability.
         client.post(CONSUMERS_ACTIONS_CONTENT_REGENERATE_APPLICABILITY_PATH, {
-            'consumer_criteria': {'filters': {'id': {'$in': [consumer_id]}}}
+            'consumer_criteria': {
+                'filters': {'id': {'$in': [consumer['consumer']['id']]}}
+            }
         })
 
         # Fetch applicability.
         applicability = client.post(CONSUMERS_CONTENT_APPLICABILITY_PATH, {
             'content_types': ['rpm'],
-            'criteria': {'filters': {'id': {'$in': [consumer_id]}}},
+            'criteria': {
+                'filters': {'id': {'$in': [consumer['consumer']['id']]}}
+            },
         })
         validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
         with self.subTest(comment='verify RPMs listed in report'):
             self.assertEqual(len(applicability[0]['applicability']['rpm']), 0)
         with self.subTest(comment='verify consumers listed in report'):
-            self.assertEqual(applicability[0]['consumers'], [consumer_id])
+            self.assertEqual(
+                applicability[0]['consumers'],
+                [consumer['consumer']['id']],
+            )

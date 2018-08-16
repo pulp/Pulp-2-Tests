@@ -15,6 +15,11 @@ from pulp_smash.pulp2.utils import search_units
 from pulp_2_tests.constants import RPM_NAMESPACES
 
 
+def gen_consumer():
+    """Create a semi-random dict for use in creating a consumer."""
+    return {'id': utils.uuid4()}
+
+
 def gen_repo(**kwargs):
     """Return a semi-random dict for use in creating an RPM repository."""
     data = {

@@ -9,10 +9,14 @@ import tempfile
 import unittest
 from urllib.parse import urljoin
 
-from pulp_smash import api, config, utils
+from pulp_smash import api, config
 from pulp_smash.pulp2.constants import CONSUMERS_PATH, REPOSITORY_PATH
 
-from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo, gen_distributor
+from pulp_2_tests.tests.rpm.api_v2.utils import (
+    gen_consumer,
+    gen_distributor,
+    gen_repo,
+)
 from pulp_2_tests.tests.platform.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 from pulp_2_tests.tests.platform.api_v2.utils import make_client_use_cert_auth
 
@@ -46,7 +50,7 @@ class BindConsumerTestCase(unittest.TestCase):
         body['distributors'] = [gen_distributor()]
         repo = client.post(REPOSITORY_PATH, body).json()
         self.addCleanup(client.delete, repo['_href'])
-        consumer = client.post(CONSUMERS_PATH, {'id': utils.uuid4()}).json()
+        consumer = client.post(CONSUMERS_PATH, gen_consumer()).json()
         self.addCleanup(client.delete, consumer['consumer']['_href'])
 
         # Step 3
@@ -106,7 +110,7 @@ class RegisterAndUpdateConsumerTestCase(unittest.TestCase):
         self.addCleanup(os.unlink, tmp_cert_file.name)
 
         # Step 1
-        consumer = client.post(CONSUMERS_PATH, {'id': utils.uuid4()})
+        consumer = client.post(CONSUMERS_PATH, gen_consumer())
         self.addCleanup(client.delete, consumer['consumer']['_href'])
         self.assertIn('certificate', consumer, 'certificate not found in the response')
 
