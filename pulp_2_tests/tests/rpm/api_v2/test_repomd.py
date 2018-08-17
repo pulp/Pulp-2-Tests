@@ -212,7 +212,6 @@ class FastForwardIntegrityTestCase(unittest.TestCase):
         repo = client.post(REPOSITORY_PATH, body)
         self.addCleanup(client.delete, repo['_href'])
         sync_repo(cfg, repo)
-        repo = client.get(repo['_href'], params={'details': True})
         return client.get(repo['_href'], params={'details': True})
 
     @staticmethod
