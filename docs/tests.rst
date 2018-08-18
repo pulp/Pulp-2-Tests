@@ -87,6 +87,7 @@ Location: :doc:`/index` → :doc:`/tests`
     tests/pulp_2_tests.tests.rpm.api_v2.test_repoview
     tests/pulp_2_tests.tests.rpm.api_v2.test_republish
     tests/pulp_2_tests.tests.rpm.api_v2.test_retain_old_count
+    tests/pulp_2_tests.tests.rpm.api_v2.test_rich_weak_dependencies
     tests/pulp_2_tests.tests.rpm.api_v2.test_rsync_distributor
     tests/pulp_2_tests.tests.rpm.api_v2.test_schedule_publish
     tests/pulp_2_tests.tests.rpm.api_v2.test_schedule_sync

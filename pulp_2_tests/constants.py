@@ -462,6 +462,9 @@ RPM_PKGLISTS_UPDATEINFO_FEED_URL = (
 )
 """A repository whose updateinfo file has multiple ``<pkglist>`` sections."""
 
+RPM_RICH_WEAK_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-richnweak-deps/')
+"""The URL to an RPM repository with weak and rich dependencies."""
+
 RPM_SIGNED_FEED_COUNT = 34
 """The number of packages available at :data:`RPM_SIGNED_FEED_URL`."""
 
@@ -528,6 +531,9 @@ RPM_WITH_VENDOR_URL = urljoin(
     'rpm-with-vendor-1-1.fc25.noarch.rpm'
 )
 """The URL of an RPM with a specified vendor in its header."""
+
+SRPM_RICH_WEAK_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'srpm-richnweak-deps/')
+"""The URL to an SRPM repository with weak and rich dependencies."""
 
 SRPM = 'test-srpm02-1.0-1.src.rpm'
 """An SRPM file at :data:`pulp_2_tests.constants.SRPM_SIGNED_FEED_URL`."""
