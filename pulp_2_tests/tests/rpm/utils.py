@@ -137,6 +137,12 @@ def os_is_f27(cfg, pulp_host=None):
             utils.get_os_release_version_id(cfg, pulp_host) == '27')
 
 
+def os_is_f28(cfg, pulp_host=None):
+    """Tell whether the given Pulp host's OS is F28."""
+    return (utils.get_os_release_id(cfg, pulp_host) == 'fedora' and
+            utils.get_os_release_version_id(cfg, pulp_host) == '28')
+
+
 def os_is_rhel6(cfg):
     """Return ``True`` if the server runs RHEL 6, or ``False`` otherwise.
 
