@@ -465,7 +465,7 @@ RPM_PKGLISTS_UPDATEINFO_FEED_URL = (
 RPM_RICH_WEAK_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-richnweak-deps/')
 """The URL to an RPM repository with weak and rich dependencies."""
 
-RPM_SIGNED_FEED_COUNT = 34
+RPM_SIGNED_FEED_COUNT = 35
 """The number of packages available at :data:`RPM_SIGNED_FEED_URL`."""
 
 RPM_SIGNED_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-signed/')
@@ -477,7 +477,7 @@ RPM_SIGNED_URL = urljoin(RPM_SIGNED_FEED_URL, RPM)
 Built from :data:`RPM_SIGNED_FEED_URL` and :data:`RPM`.
 """
 
-RPM_UNSIGNED_FEED_COUNT = 34
+RPM_UNSIGNED_FEED_COUNT = 35
 """The number of packages available at :data:`RPM_UNSIGNED_FEED_URL`."""
 
 RPM_UNSIGNED_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-unsigned/')
