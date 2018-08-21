@@ -248,7 +248,7 @@ RPM_DATA = MappingProxyType({
         'description': 'A dummy package of bear',
         'files': {'dir': [], 'file': ['/tmp/bear.txt']},
         'group': 'Internet/Applications',
-        'size': {'installed': 42, 'package': 1846},
+        'size': {'installed': 43, 'package': 1846},
         'sourcerpm': 'bear-4.1-1.src.rpm',
         'summary': 'A dummy package of bear',
         'vendor': None,
