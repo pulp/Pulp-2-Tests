@@ -4,7 +4,7 @@ import unittest
 from urllib.parse import urljoin
 
 from packaging.version import Version
-from pulp_smash import api, config, utils
+from pulp_smash import api, cli, config, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     publish_repo,
@@ -19,6 +19,10 @@ from pulp_2_tests.constants import (
     SRPM_RICH_WEAK_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_distributor, gen_repo
+from pulp_2_tests.tests.rpm.utils import (
+    gen_yum_config_file,
+    rpm_rich_weak_dependencies,
+)
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
 
@@ -94,3 +98,48 @@ class UploadRPMTestCase(unittest.TestCase):
 
         # Test if RPM extracted correct metadata for creating filename
         self.assertEqual(units[0]['metadata']['filename'], RPM_RICH_WEAK)
+
+
+class PackageManagerCosumeRPMTestCase(unittest.TestCase):
+    """Test whether package manager can consume RPM with rich/weak from Pulp."""
+
+    def test_all(self):
+        """Package manager can consume RPM with rich/weak dependencies from Pulp."""
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.17'):
+            raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
+        if not rpm_rich_weak_dependencies(cfg):
+            raise unittest.SkipTest('This test requires RPM 4.12 or newer.')
+        client = api.Client(cfg, api.json_handler)
+        body = gen_repo(
+            importer_config={'feed': RPM_RICH_WEAK_FEED_URL},
+            distributors=[gen_distributor()]
+        )
+        repo = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo['_href'])
+        repo = client.get(repo['_href'], params={'details': True})
+        sync_repo(cfg, repo)
+        publish_repo(cfg, repo)
+        verify = cfg.get_hosts('api')[0].roles['api'].get('verify')
+        sudo = () if cli.is_root(cfg) else ('sudo',)
+        repo_path = gen_yum_config_file(
+            cfg,
+            baseurl=urljoin(cfg.get_base_url(), urljoin(
+                'pulp/repos/',
+                repo['distributors'][0]['config']['relative_url']
+            )),
+            name=repo['_href'],
+            enabled=1,
+            gpgcheck=0,
+            metadata_expire=0,  # force metadata to load every time
+            repositoryid=repo['id'],
+            sslverify='yes' if verify else 'no',
+        )
+        cli_client = cli.Client(cfg)
+        self.addCleanup(cli_client.run, sudo + ('rm', repo_path))
+        rpm_name = 'Cobbler'
+        pkg_mgr = cli.PackageManager(cfg)
+        pkg_mgr.install(rpm_name)
+        self.addCleanup(pkg_mgr.uninstall, rpm_name)
+        rpm = cli_client.run(('rpm', '-q', rpm_name)).stdout.strip().split('-')
+        self.assertEqual(rpm_name, rpm[0])

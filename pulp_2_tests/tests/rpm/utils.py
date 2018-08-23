@@ -9,6 +9,8 @@ from packaging.version import Version
 from pulp_smash import cli, selectors, utils
 from pulp_smash.pulp2 import utils as pulp2_utils
 
+from pulp_2_tests.constants import RPM_PKG_RICH_WEAK_VERSION
+
 
 def set_up_module():
     """Skip tests if Pulp 2 isn't under test or if RPM isn't installed."""
@@ -157,6 +159,23 @@ def os_is_rhel6(cfg):
         '/etc/redhat-release',
     ))
     return response.returncode == 0
+
+
+def rpm_rich_weak_dependencies(cfg):
+    """Return  ``True`` if the Pulp host supports RPM rich/weak dependencies.
+
+    ``False`` otherwise.
+
+    `Weak dependencies <http://rpm.org/wiki/Releases/4.12.0>`_
+
+    RPM 4.12 added support for specifying weak dependencies (Recommends,
+    Suggests, Supplements and Enhances) tags in spec.
+
+    :param cfg: Information about the system.
+    :returns: True or False.
+    """
+    response = cli.Client(cfg).run(('rpm', '--version'))
+    return Version(response.stdout.split()[2]) >= Version(RPM_PKG_RICH_WEAK_VERSION)
 
 
 def gen_yum_config_file(cfg, repositoryid, **kwargs):
