@@ -121,6 +121,12 @@ FILE2_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'file2/')
 FILE2_URL = urljoin(FILE2_FEED_URL, '1.iso')
 """The URL to an ISO file at :data:`FILE2_FEED_URL`."""
 
+MODULE_FIXTURES_PACKAGES = {'duck': 3, 'kangaroo': 2, 'walrus': 2}
+"""The name and the number of the package versions listed in `modules.yaml`_.
+
+.. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
+"""
+
 OPENSUSE_FEED_URL = 'https://download.opensuse.org/update/leap/42.3/oss/'
 """The URL to an openSUSE repository.
 
