@@ -468,6 +468,9 @@ RPM_PKGLISTS_UPDATEINFO_FEED_URL = (
 )
 """A repository whose updateinfo file has multiple ``<pkglist>`` sections."""
 
+RPM_PKG_RICH_WEAK_VERSION = '4.12'
+"""The version of the RPM package manager that introduced weak dependencies resolution."""
+
 RPM_RICH_WEAK_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-richnweak-deps/')
 """The URL to an RPM repository with weak and rich dependencies."""
 
