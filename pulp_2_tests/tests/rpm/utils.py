@@ -208,6 +208,18 @@ def gen_yum_config_file(cfg, repositoryid, **kwargs):
     return path
 
 
+def os_support_modularity(cfg, pulp_host=None):
+    """Return ``True`` if the server `supports modularity`_, or ``False`` otherwise.
+
+    .. _supports modularity: https://fedoraproject.org/wiki/Changes/F28AddonModularity
+
+    :param cfg: Information about the system being targeted.
+    :returns: True or False.
+    """
+    return (utils.get_os_release_id(cfg, pulp_host) == 'fedora' and
+            utils.get_os_release_version_id(cfg, pulp_host) >= '28')
+
+
 skip_if = partial(selectors.skip_if, exc=SkipTest)  # pylint:disable=invalid-name
 """The ``@skip_if`` decorator, customized for unittest.
 
