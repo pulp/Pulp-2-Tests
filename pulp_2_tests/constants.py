@@ -323,6 +323,12 @@ RPM2 = '{}-{}{}-{}.{}.rpm'.format(
 )
 """The name of an RPM. See :data:`pulp_2_tests.constants.RPM2_UNSIGNED_URL`."""
 
+RPM_RICH_WEAK = 'PanAmerican-1-0.noarch.rpm'
+"""The path to an RPM with rich/weak dependency in one of the RPM repositories.
+
+This path may be joined with :data:`RPM_RICH_WEAK_FEED_URL`.
+"""
+
 RPM_WITH_VENDOR_DATA = MappingProxyType({
     'name': 'rpm-with-vendor',
     'epoch': '0',
