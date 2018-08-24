@@ -100,6 +100,9 @@ FILE_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'file/')
 FILE_FEED_COUNT = 3
 """The number of packages available at :data:`FILE_FEED_URL`."""
 
+FILE_INVALID_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'file-invalid/')
+"""The URL to an invalid file repository."""
+
 FILE_LARGE_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'file-large/')
 """The URL to a file repository containing a large number of files."""
 

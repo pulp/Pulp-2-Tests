@@ -6,12 +6,14 @@ import unittest
 from urllib.parse import urljoin, urlparse, urlsplit
 
 from pulp_smash import api, cli, config, selectors, utils
+from pulp_smash.exceptions import TaskReportError
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import publish_repo, sync_repo, upload_import_unit
 
 from pulp_2_tests.constants import (
     FILE_FEED_COUNT,
     FILE_FEED_URL,
+    FILE_INVALID_FEED_URL,
     FILE_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
@@ -171,3 +173,34 @@ class UploadIsoTestCase(unittest.TestCase):
         path = urljoin(urljoin('/pulp/isos/', repo['id'] + '/'), iso_name)
         iso2 = client.get(path).content
         self.assertEqual(iso, iso2)
+
+
+class SyncInvalidFileTestCase(unittest.TestCase):
+    """Perform sync on an invalid file repository.
+
+    Assert that an exception is raised, and that error message has
+    keywords related to the the reason of the failure.
+
+    This test targets the following issues:
+
+    * `Pulp 2 Tests #18 <https://github.com/PulpQE/Pulp-2-Tests/issues/18>`_.
+    * `Pulp 3845# <https://pulp.plan.io/issues/3845>`_.
+    """
+
+    def test_all(self):
+        """Perform sync on an invalid file repository."""
+        cfg = config.get_config()
+        client = api.Client(cfg, api.json_handler)
+        body = {
+            'id': utils.uuid4(),
+            'importer_config': {'feed': FILE_INVALID_FEED_URL},
+            'importer_type_id': 'iso_importer',
+        }
+        repo = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo['_href'])
+        with self.assertRaises(TaskReportError) as context:
+            sync_repo(cfg, repo)
+            for key in ('1048576 bytes', '5 bytes'):
+                with self.subTest(key=key):
+                    error = context.exception.task['error']['description']
+                    self.assertIn(key, error, error)
