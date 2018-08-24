@@ -104,7 +104,8 @@ class ApplyErratumTestCase(unittest.TestCase):
         self.assertIn(yum_or_dnf, ('yum', 'dnf'))
         if yum_or_dnf == 'yum':
             return ('--advisory', erratum)
-        lines = cli.Client(cfg).run((
+        sudo = () if cli.is_root(cfg) else ('sudo',)
+        lines = cli.Client(cfg).run(sudo + (
             'dnf', '--quiet', 'updateinfo', 'list', erratum
         )).stdout.strip().splitlines()
         return tuple((line.split()[2] for line in lines))
