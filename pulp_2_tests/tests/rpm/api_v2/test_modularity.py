@@ -6,10 +6,14 @@ from urllib.parse import urljoin
 from packaging.version import Version
 from pulp_smash import api, cli, config
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
-from pulp_smash.pulp2.utils import publish_repo, sync_repo
+from pulp_smash.pulp2.utils import (
+    publish_repo,
+    sync_repo,
+)
 
 from pulp_2_tests.constants import (
     MODULE_FIXTURES_PACKAGES,
+    MODULE_FIXTURES_PACKAGE_STREAMS,
     RPM_WITH_MODULES_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
@@ -63,6 +67,71 @@ class ManageModularContentTestCase(unittest.TestCase):
             'modules',
             api.safe_handler,
         )
+
+    def test_copy_modulemd_recur(self):
+        """Test copy of modulemd in RPM repository in recursive mode."""
+        criteria = {
+            'filters': {'unit': {'name': 'walrus',
+                                 'stream': MODULE_FIXTURES_PACKAGE_STREAMS['walrus']['stream']}},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.copy_content_between_repos(True, criteria)
+        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
+        self.assertEqual(repo['content_unit_counts']['rpm'],
+                         MODULE_FIXTURES_PACKAGE_STREAMS['walrus']['rpm_count'])
+        self.assertEqual(repo['total_repository_units'],
+                         MODULE_FIXTURES_PACKAGE_STREAMS['walrus']['total_available_units'])
+
+    def test_copy_modulemd_non_recur(self):
+        """Test copy of modulemd in RPM repository in non recursive mode."""
+        criteria = {
+            'filters': {'unit': {'name': 'walrus', 'stream': '0.71'}},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.copy_content_between_repos(False, criteria)
+        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
+        self.assertEqual(repo['total_repository_units'], 1)
+        self.assertNotIn('rpm', repo['content_unit_counts'])
+
+    def test_copy_modulemd_defaults(self):
+        """Test copy of modulemd_defaults in RPM repository."""
+        criteria = {
+            'filters': {},
+            'type_ids': ['modulemd_defaults'],
+        }
+        repo = self.copy_content_between_repos(True, criteria)
+        self.assertEqual(repo['content_unit_counts']['modulemd_defaults'], 3)
+        self.assertEqual(repo['total_repository_units'], 3)
+        self.assertNotIn('rpm', repo['content_unit_counts'])
+
+    def copy_content_between_repos(self, recursive, criteria):
+        """Test sync and copy modular RPM repository."""
+        # repo1
+        body = gen_repo()
+        body['importer_config']['feed'] = RPM_WITH_MODULES_FEED_URL
+        body['distributors'] = [gen_distributor()]
+        repo1 = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo1['_href'])
+        sync_repo(self.cfg, repo1)
+        repo1 = self.client.get(repo1['_href'], params={'details': True})
+
+        # repo2
+        body = gen_repo()
+        repo2 = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo2['_href'])
+        repo2 = self.client.get(repo2['_href'], params={'details': True})
+
+        # Copy repo1 to repo2
+        self.client.post(
+            urljoin(repo2['_href'], 'actions/associate/'),
+            {
+                'source_repo_id': repo1['id'],
+                'override_config': {'recursive': recursive},
+                'criteria': criteria
+            }
+        )
+
+        return self.client.get(repo2['_href'], params={'details': True})
 
 
 class PackageManagerModuleListTestCase(unittest.TestCase):
