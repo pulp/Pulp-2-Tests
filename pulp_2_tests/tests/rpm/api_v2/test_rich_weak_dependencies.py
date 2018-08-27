@@ -16,6 +16,7 @@ from pulp_smash.pulp2.utils import (
 from pulp_2_tests.constants import (
     RPM_RICH_WEAK,
     RPM_RICH_WEAK_FEED_URL,
+    RPM2_RICH_WEAK_DATA,
     SRPM_RICH_WEAK_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_distributor, gen_repo
@@ -143,3 +144,48 @@ class PackageManagerCosumeRPMTestCase(unittest.TestCase):
         self.addCleanup(pkg_mgr.uninstall, rpm_name)
         rpm = cli_client.run(('rpm', '-q', rpm_name)).stdout.strip().split('-')
         self.assertEqual(rpm_name, rpm[0])
+
+
+class CopyRecursiveUnitsTestCase(unittest.TestCase):
+    """Test recurisve copy units for a repository rich/weak dependencies."""
+
+    def test_all(self):
+        """Recursive copy of units for a repository with rich/weak dependencies.
+
+        This test targets the following issue:
+
+        `Pulp Smash #1107 <https://github.com/PulpQE/pulp-smash/issues/1107>`_.
+        """
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.17'):
+            raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
+        if not rpm_rich_weak_dependencies(cfg):
+            raise unittest.SkipTest('This test requires RPM 4.12 or newer.')
+        client = api.Client(cfg, api.json_handler)
+        repos = []
+        body = gen_repo(
+            importer_config={'feed': RPM_RICH_WEAK_FEED_URL},
+            distributors=[gen_distributor()]
+        )
+        repos.append(client.post(REPOSITORY_PATH, body))
+        self.addCleanup(client.delete, repos[0]['_href'])
+        sync_repo(cfg, repos[0])
+        body = gen_repo()
+        repos.append(client.post(REPOSITORY_PATH, body))
+        self.addCleanup(client.delete, repos[1]['_href'])
+        client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
+            'source_repo_id': repos[0]['id'],
+            'override_config': {'recursive': True},
+            'criteria': {
+                'filters': {'unit': {'name': RPM2_RICH_WEAK_DATA['name']}},
+                'type_ids': ['rpm'],
+            },
+        })
+        dst_unit_ids = [
+            unit['metadata']['name'] for unit in
+            search_units(cfg, repos[1], {'type_ids': ['rpm']})]
+        self.assertEqual(
+            len(dst_unit_ids),
+            RPM2_RICH_WEAK_DATA['total_installed_packages'],
+            dst_unit_ids
+        )
