@@ -329,6 +329,24 @@ RPM_RICH_WEAK = 'PanAmerican-1-0.noarch.rpm'
 This path may be joined with :data:`RPM_RICH_WEAK_FEED_URL`.
 """
 
+RPM2_RICH_DEPENDENCY = ['Scotch', 'contireau', 'icecubes', 'tablespoon-sugar']
+"""The names rich dependencies associate with :data:`RPM2_RICH_WEAK_DATA`."""
+
+RPM2_WEAK_DEPENDENCY = ['orange-bits']
+"""The name weak dependencies associate with :data:`RPM2_RICH_WEAK_DATA`."""
+
+RPM2_RICH_WEAK_TOTAL_DEPENDENCIES = len(RPM2_RICH_DEPENDENCY) + len(RPM2_WEAK_DEPENDENCY)
+"""The total of rich and weak dependencies :data:`RPM2_RICH_WEAK_DATA`."""
+
+RPM2_RICH_WEAK_DATA = MappingProxyType({
+    'name': 'Cobbler',
+    'rich_dependency': len(RPM2_RICH_DEPENDENCY),
+    'weak_dependency': len(RPM2_WEAK_DEPENDENCY),
+    'total_dependencies': RPM2_RICH_WEAK_TOTAL_DEPENDENCIES,
+    'total_installed_packages': RPM2_RICH_WEAK_TOTAL_DEPENDENCIES + 1,
+})
+"""Data for an RPM package with rich/weak dependency."""
+
 RPM_WITH_VENDOR_DATA = MappingProxyType({
     'name': 'rpm-with-vendor',
     'epoch': '0',
