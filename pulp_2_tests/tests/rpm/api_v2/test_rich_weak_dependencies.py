@@ -147,45 +147,68 @@ class PackageManagerCosumeRPMTestCase(unittest.TestCase):
 
 
 class CopyRecursiveUnitsTestCase(unittest.TestCase):
-    """Test recurisve copy units for a repository rich/weak dependencies."""
+    """Test copy units for a repository rich/weak dependencies.
 
-    def test_all(self):
-        """Recursive copy of units for a repository with rich/weak dependencies.
+    This test targets the following issue:
 
-        This test targets the following issue:
+    `Pulp Smash #1107 <https://github.com/PulpQE/pulp-smash/issues/1107>`_.
+    """
 
-        `Pulp Smash #1107 <https://github.com/PulpQE/pulp-smash/issues/1107>`_.
-        """
-        cfg = config.get_config()
-        if cfg.pulp_version < Version('2.17'):
+    @classmethod
+    def setUpClass(cls):
+        """Create class-wide variables."""
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.17'):
             raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
-        if not rpm_rich_weak_dependencies(cfg):
+        if not rpm_rich_weak_dependencies(cls.cfg):
             raise unittest.SkipTest('This test requires RPM 4.12 or newer.')
-        client = api.Client(cfg, api.json_handler)
-        repos = []
-        body = gen_repo(
-            importer_config={'feed': RPM_RICH_WEAK_FEED_URL},
-            distributors=[gen_distributor()]
-        )
-        repos.append(client.post(REPOSITORY_PATH, body))
-        self.addCleanup(client.delete, repos[0]['_href'])
-        sync_repo(cfg, repos[0])
-        body = gen_repo()
-        repos.append(client.post(REPOSITORY_PATH, body))
-        self.addCleanup(client.delete, repos[1]['_href'])
-        client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
-            'source_repo_id': repos[0]['id'],
-            'override_config': {'recursive': True},
-            'criteria': {
-                'filters': {'unit': {'name': RPM2_RICH_WEAK_DATA['name']}},
-                'type_ids': ['rpm'],
-            },
-        })
+        cls.client = api.Client(cls.cfg, api.json_handler)
+
+    def test_recursive(self):
+        """Test recursive copy of units for a repository with rich/weak depdendencies.
+
+        See :meth:`do_test`."
+        """
+        repo = self.do_test(True)
         dst_unit_ids = [
             unit['metadata']['name'] for unit in
-            search_units(cfg, repos[1], {'type_ids': ['rpm']})]
+            search_units(self.cfg, repo, {'type_ids': ['rpm']})]
         self.assertEqual(
             len(dst_unit_ids),
             RPM2_RICH_WEAK_DATA['total_installed_packages'],
             dst_unit_ids
         )
+
+    def test_non_recursive(self):
+        """Test simple copy of an unit for a repository with rich/weak depdendencies.
+
+        See :meth:`do_test`."
+        """
+        repo = self.do_test(False)
+        dst_unit_ids = [
+            unit['metadata']['name'] for unit in
+            search_units(self.cfg, repo, {'type_ids': ['rpm']})]
+        self.assertEqual(len(dst_unit_ids), 1, dst_unit_ids)
+
+    def do_test(self, recursive):
+        """Copy of units for a repository with rich/weak dependencies."""
+        repos = []
+        body = gen_repo(
+            importer_config={'feed': RPM_RICH_WEAK_FEED_URL},
+            distributors=[gen_distributor()]
+        )
+        repos.append(self.client.post(REPOSITORY_PATH, body))
+        self.addCleanup(self.client.delete, repos[0]['_href'])
+        sync_repo(self.cfg, repos[0])
+        body = gen_repo()
+        repos.append(self.client.post(REPOSITORY_PATH, body))
+        self.addCleanup(self.client.delete, repos[1]['_href'])
+        self.client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
+            'source_repo_id': repos[0]['id'],
+            'override_config': {'recursive': recursive},
+            'criteria': {
+                'filters': {'unit': {'name': RPM2_RICH_WEAK_DATA['name']}},
+                'type_ids': ['rpm'],
+            },
+        })
+        return self.client.get(repos[1]['_href'], params={'details': True})
