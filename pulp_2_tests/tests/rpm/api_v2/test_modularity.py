@@ -102,9 +102,10 @@ class PackageManagerModuleListTestCase(unittest.TestCase):
             repositoryid=repo['id'],
             sslverify='yes' if verify else 'no',
         )
-        self.addCleanup(cli.Client(cfg).run, sudo + ('rm', repo_path))
-        lines = cli.Client(cfg).run((
-            'dnf', 'module', 'list', '--all'
+        cli_client = cli.Client(cfg)
+        self.addCleanup(cli_client.run, sudo + ('rm', repo_path))
+        lines = cli_client.run((
+            sudo + ('dnf', 'module', 'list', '--all')
         )).stdout.splitlines()
         for key, value in MODULE_FIXTURES_PACKAGES.items():
             with self.subTest(package=key):
