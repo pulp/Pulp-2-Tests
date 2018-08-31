@@ -130,8 +130,9 @@ class RemoveOldRepodataTestCase(unittest.TestCase):
         second publish. This test targets `Pulp #3816
         <https://pulp.plan.io/issues/3816>`_.
         """
-        if (self.cfg.pulp_version >= Version('2.17') and
-                not selectors.bug_is_fixed(3816, self.cfg.pulp_version)):
+        if self.cfg.pulp_version < Version('2.17.1'):
+            self.skipTest('This test requires Pulp version 2.17.1 or newer.')
+        if not selectors.bug_is_fixed(3816, self.cfg.pulp_version):
             self.skipTest('https://pulp.plan.io/issues/3816')
         if not selectors.bug_is_fixed(2788, self.cfg.pulp_version):
             self.skipTest('https://pulp.plan.io/issues/2788')
