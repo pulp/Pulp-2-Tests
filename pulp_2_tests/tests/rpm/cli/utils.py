@@ -27,3 +27,18 @@ def count_langpacks(cfg, repo_id):
     if lines:
         return int(lines[0].split(keyword)[1].strip())
     return 0
+
+
+def sync_repo(cfg, repo_id, force_sync=False):
+    """Sync an RPM repository.
+
+    :param cfg: Information about a Pulp
+        deployment.
+    :param repo_id: A RPM repository ID.
+    :param repo_id: A boolean flag to denote if is a force-full sync.
+    :returns: A ``pulp_smash.cli.CompletedProcess``.
+    """
+    cmd = ['pulp-admin', 'rpm', 'repo', 'sync', 'run', '--repo-id', repo_id]
+    if force_sync:
+        cmd.append('--force-full')
+    return cli.Client(cfg).run(cmd)

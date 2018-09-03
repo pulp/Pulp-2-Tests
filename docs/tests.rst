@@ -106,6 +106,7 @@ Location: :doc:`/index` → :doc:`/tests`
     tests/pulp_2_tests.tests.rpm.api_v2.utils
     tests/pulp_2_tests.tests.rpm.cli
     tests/pulp_2_tests.tests.rpm.cli.test_character_encoding
+    tests/pulp_2_tests.tests.rpm.cli.test_content
     tests/pulp_2_tests.tests.rpm.cli.test_copy_units
     tests/pulp_2_tests.tests.rpm.cli.test_environments
     tests/pulp_2_tests.tests.rpm.cli.test_langpacks
