@@ -7,6 +7,7 @@ from pulp_smash import cli, config, selectors, utils
 from pulp_smash.pulp2.utils import pulp_admin_login, reset_pulp
 
 from pulp_2_tests.constants import RPM_UNSIGNED_FEED_URL
+from pulp_2_tests.tests.rpm.cli.utils import sync_repo
 from pulp_2_tests.tests.rpm.utils import check_issue_2620, set_up_module
 
 
@@ -168,18 +169,3 @@ def get_rpm_names(cfg, repo_id):
         line.split(keyword)[1].strip() for line in proc.stdout.splitlines()
         if keyword in line
     ]
-
-
-def sync_repo(cfg, repo_id, force_sync=False):
-    """Sync an RPM repository.
-
-    :param cfg: Information about a Pulp
-        deployment.
-    :param repo_id: A RPM repository ID.
-    :param repo_id: A boolean flag to denote if is a force-full sync.
-    :returns: A ``pulp_smash.cli.CompletedProcess``.
-    """
-    cmd = ['pulp-admin', 'rpm', 'repo', 'sync', 'run', '--repo-id', repo_id]
-    if force_sync:
-        cmd.append('--force-full')
-    return cli.Client(cfg).run(cmd)
