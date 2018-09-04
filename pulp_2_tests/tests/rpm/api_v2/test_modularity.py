@@ -13,7 +13,7 @@ from pulp_smash.pulp2.utils import (
 
 from pulp_2_tests.constants import (
     MODULE_FIXTURES_PACKAGES,
-    MODULE_FIXTURES_PACKAGE_STREAMS,
+    MODULE_FIXTURES_PACKAGE_STREAM,
     RPM_WITH_MODULES_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
@@ -71,26 +71,45 @@ class ManageModularContentTestCase(unittest.TestCase):
     def test_copy_modulemd_recur(self):
         """Test copy of modulemd in RPM repository in recursive mode."""
         criteria = {
-            'filters': {'unit': {'name': 'walrus',
-                                 'stream': MODULE_FIXTURES_PACKAGE_STREAMS['walrus']['stream']}},
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
             'type_ids': ['modulemd'],
         }
         repo = self.copy_content_between_repos(True, criteria)
         self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
-        self.assertEqual(repo['content_unit_counts']['rpm'],
-                         MODULE_FIXTURES_PACKAGE_STREAMS['walrus']['rpm_count'])
-        self.assertEqual(repo['total_repository_units'],
-                         MODULE_FIXTURES_PACKAGE_STREAMS['walrus']['total_available_units'])
+        self.assertEqual(
+            repo['content_unit_counts']['rpm'],
+            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo['content_unit_counts']['rpm']
+        )
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
+            repo['total_repository_units']
+        )
 
     def test_copy_modulemd_non_recur(self):
         """Test copy of modulemd in RPM repository in non recursive mode."""
         criteria = {
-            'filters': {'unit': {'name': 'walrus', 'stream': '0.71'}},
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
             'type_ids': ['modulemd'],
         }
         repo = self.copy_content_between_repos(False, criteria)
-        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
-        self.assertEqual(repo['total_repository_units'], 1)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd'],
+            1,
+            repo['content_unit_counts']['modulemd']
+        )
+        self.assertEqual(
+            repo['total_repository_units'],
+            1,
+            repo['total_repository_units']
+        )
         self.assertNotIn('rpm', repo['content_unit_counts'])
 
     def test_copy_modulemd_defaults(self):
@@ -100,8 +119,15 @@ class ManageModularContentTestCase(unittest.TestCase):
             'type_ids': ['modulemd_defaults'],
         }
         repo = self.copy_content_between_repos(True, criteria)
-        self.assertEqual(repo['content_unit_counts']['modulemd_defaults'], 3)
-        self.assertEqual(repo['total_repository_units'], 3)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            3,
+            repo['content_unit_counts'])
+        self.assertEqual(
+            repo['total_repository_units'],
+            3,
+            repo['total_repository_units']
+        )
         self.assertNotIn('rpm', repo['content_unit_counts'])
 
     def copy_content_between_repos(self, recursive, criteria):
@@ -130,7 +156,6 @@ class ManageModularContentTestCase(unittest.TestCase):
                 'criteria': criteria
             }
         )
-
         return self.client.get(repo2['_href'], params={'details': True})
 
 
