@@ -178,7 +178,7 @@ def rpm_rich_weak_dependencies(cfg):
     return Version(response.stdout.split()[2]) >= Version(RPM_PKG_RICH_WEAK_VERSION)
 
 
-def gen_yum_config_file(cfg, repositoryid, **kwargs):
+def gen_yum_config_file(cfg, repositoryid, baseurl, name, **kwargs):
     """Generate a yum configuration file and write it to ``/etc/yum.repos.d/``.
 
     Generate a yum configuration file containing a single repository section,
@@ -189,10 +189,27 @@ def gen_yum_config_file(cfg, repositoryid, **kwargs):
     :param repositoryid: The section's ``repositoryid``. Used when naming the
         configuration file and populating the brackets at the head of the file.
         For details, see yum.conf(5).
+    :param baseurl: The required option ``baseurl`` specifying the url of repo.
+        For details, see yum.conf(5)
+    :param name: The required option ``name`` specifying the name of repo.
+        For details, see yum.conf(5).
     :param kwargs: Section options. Each kwarg corresponds to one option. For
         details, see yum.conf(5).
     :returns: The path to the yum configuration file.
     """
+    # required repo options
+    kwargs.setdefault('name', name)
+    kwargs.setdefault('baseurl', baseurl)
+    # assume some common used defaults
+    kwargs.setdefault('enabled', 1)
+    kwargs.setdefault('gpgcheck', 0)
+    kwargs.setdefault('metadata_expire', 0)  # force metadata load every time
+    # if sslverify is not provided in kwargs it is inferred from cfg
+    kwargs.setdefault(
+        'sslverify',
+        'yes' if cfg.get_hosts('api')[0].roles['api'].get('verify') else 'no'
+    )
+
     path = os.path.join('/etc/yum.repos.d/', repositoryid + '.repo')
     with StringIO() as section:
         section.write('[{}]\n'.format(repositoryid))
