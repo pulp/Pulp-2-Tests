@@ -130,12 +130,12 @@ MODULE_FIXTURES_PACKAGES = {'duck': 3, 'kangaroo': 2, 'walrus': 2}
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
 """
 
-MODULE_FIXTURES_PACKAGE_STREAMS = {
-    'walrus': {
-        'stream': '0.71',
-        'rpm_count': 4,
-        'total_available_units': 5,
-    }}
+MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType({
+    'name': 'walrus',
+    'stream': '0.71',
+    'rpm_count': 4,
+    'total_available_units': 5,
+})
 """The name and the stream of the package listed in `modules.yaml`_.
 
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
