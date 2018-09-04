@@ -101,7 +101,7 @@ class UploadRPMTestCase(unittest.TestCase):
         self.assertEqual(units[0]['metadata']['filename'], RPM_RICH_WEAK)
 
 
-class PackageManagerCosumeRPMTestCase(unittest.TestCase):
+class PackageManagerConsumeRPMTestCase(unittest.TestCase):
     """Test whether package manager can consume RPM with rich/weak from Pulp."""
 
     def test_all(self):
@@ -144,6 +144,45 @@ class PackageManagerCosumeRPMTestCase(unittest.TestCase):
         self.addCleanup(pkg_mgr.uninstall, rpm_name)
         rpm = cli_client.run(('rpm', '-q', rpm_name)).stdout.strip().split('-')
         self.assertEqual(rpm_name, rpm[0])
+
+
+class SearchContentTestCase(unittest.TestCase):
+    """Verify keywords content."""
+
+    def test_all(self):
+        """Search contents of a richnweak repository matching package name.
+
+        This test targets `Pulp #3929`_ and `Pulp Smash #901`_. The
+        `repository content`_ documentation describes the CLI content syntax.
+
+        .. _Pulp #3929:  https://pulp.plan.io/issues/3929
+        .. _Pulp Smash #901: https://github.com/PulpQE/pulp-smash/issues/901
+        .. _repository content:
+            https://docs.pulpproject.org/en/latest/user-guide/admin-client/repositories.html#content-search
+
+        Asserts the required fields are present.
+        """
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.17.1'):
+            raise unittest.SkipTest('This test requires Pulp 2.17.1 or newer.')
+        api_client = api.Client(cfg, api.json_handler)
+        body = gen_repo(
+            importer_config={'feed': RPM_RICH_WEAK_FEED_URL},
+        )
+        repo = api_client.post(REPOSITORY_PATH, body)
+        self.addCleanup(api_client.delete, repo['_href'])
+        sync_repo(cfg, repo)
+        repo = api_client.get(repo['_href'], params={'details': True})
+
+        result = cli.Client(cfg).run(
+            'pulp-admin rpm repo content rpm --repo-id {} '
+            '--match name=Cobbler'
+            .format(repo['id']).split()
+        )
+        required_fields = ('Recommends:', 'Requires:', 'Provides:')
+        for field in required_fields:
+            with self.subTest(field=field):
+                self.assertEqual(result.stdout.count(field), 1, result)
 
 
 class CopyRecursiveUnitsTestCase(unittest.TestCase):
