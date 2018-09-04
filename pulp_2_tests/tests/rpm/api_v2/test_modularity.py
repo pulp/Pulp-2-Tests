@@ -181,7 +181,6 @@ class PackageManagerModuleListTestCase(unittest.TestCase):
         sync_repo(cfg, repo)
         publish_repo(cfg, repo)
         repo = client.get(repo['_href'], params={'details': True})
-        verify = cfg.get_hosts('api')[0].roles['api'].get('verify')
         sudo = () if cli.is_root(cfg) else ('sudo',)
         repo_path = gen_yum_config_file(
             cfg,
@@ -190,11 +189,7 @@ class PackageManagerModuleListTestCase(unittest.TestCase):
                 repo['distributors'][0]['config']['relative_url']
             )),
             name=repo['_href'],
-            enabled=1,
-            gpgcheck=0,
-            metadata_expire=0,  # force metadata to load every time
-            repositoryid=repo['id'],
-            sslverify='yes' if verify else 'no',
+            repositoryid=repo['id']
         )
         cli_client = cli.Client(cfg)
         self.addCleanup(cli_client.run, sudo + ('rm', repo_path))

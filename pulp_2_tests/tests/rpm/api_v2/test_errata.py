@@ -75,7 +75,6 @@ class ApplyErratumTestCase(unittest.TestCase):
 
         Also, schedule it for deletion. Return nothing.
         """
-        verify = cfg.get_hosts('api')[0].roles['api'].get('verify')
         sudo = () if cli.is_root(cfg) else ('sudo',)
         repo_path = gen_yum_config_file(
             cfg,
@@ -84,11 +83,7 @@ class ApplyErratumTestCase(unittest.TestCase):
                 repo['distributors'][0]['config']['relative_url']
             )),
             name=repo['_href'],
-            enabled=1,
-            gpgcheck=0,
-            metadata_expire=0,  # force metadata to load every time
-            repositoryid=repo['id'],
-            sslverify='yes' if verify else 'no',
+            repositoryid=repo['id']
         )
         self.addCleanup(cli.Client(cfg).run, sudo + ('rm', repo_path))
 

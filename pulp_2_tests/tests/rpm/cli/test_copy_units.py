@@ -223,7 +223,6 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
         client = cli.Client(cfg)
         pkg_mgr = cli.PackageManager(cfg)
         sudo = () if cli.is_root(cfg) else ('sudo',)
-        verify = cfg.get_hosts('api')[0].roles['api'].get('verify')
 
         # Create the second repository.
         repo_id = self.create_repo(cfg)
@@ -239,12 +238,8 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
         repo_path = gen_yum_config_file(
             cfg,
             baseurl=urljoin(cfg.get_base_url(), 'pulp/repos/' + repo_id),
-            enabled=1,
-            gpgcheck=0,
-            metadata_expire=0,  # force metadata to load every time
             name=repo_id,
-            repositoryid=repo_id,
-            sslverify='yes' if verify else 'no',
+            repositoryid=repo_id
         )
         self.addCleanup(client.run, sudo + ('rm', repo_path))
         pkg_mgr.install(rpm_name)
