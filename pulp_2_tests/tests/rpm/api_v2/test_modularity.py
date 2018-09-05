@@ -4,7 +4,7 @@ import unittest
 from urllib.parse import urljoin
 
 from packaging.version import Version
-from pulp_smash import api, cli, config
+from pulp_smash import api, cli, config, selectors
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     publish_repo,
@@ -42,18 +42,13 @@ class ManageModularContentTestCase(unittest.TestCase):
         cls.cfg = config.get_config()
         if cls.cfg.pulp_version < Version('2.17'):
             raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
+        if not os_support_modularity(cls.cfg):
+            raise unittest.SkipTest('This test requires an OS that supports modularity.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_sync_publish_repo(self):
         """Test sync and publish modular RPM repository."""
-        body = gen_repo()
-        body['importer_config']['feed'] = RPM_WITH_MODULES_FEED_URL
-        body['distributors'] = [gen_distributor()]
-        repo = self.client.post(REPOSITORY_PATH, body)
-        self.addCleanup(self.client.delete, repo['_href'])
-        sync_repo(self.cfg, repo)
-        repo = self.client.get(repo['_href'], params={'details': True})
-
+        repo = self.create_sync_modular_repo()
         # Assert that `modulemd` and `modulemd_defaults` are present on the
         # repository.
         self.assertIsNotNone(repo['content_unit_counts']['modulemd'])
@@ -130,16 +125,23 @@ class ManageModularContentTestCase(unittest.TestCase):
         )
         self.assertNotIn('rpm', repo['content_unit_counts'])
 
-    def copy_content_between_repos(self, recursive, criteria):
-        """Test sync and copy modular RPM repository."""
-        # repo1
+    def create_sync_modular_repo(self):
+        """Create a repo with feed pointing to modular data and sync it.
+
+        :returns: repo data that is created and synced with modular content.
+        """
         body = gen_repo()
         body['importer_config']['feed'] = RPM_WITH_MODULES_FEED_URL
         body['distributors'] = [gen_distributor()]
-        repo1 = self.client.post(REPOSITORY_PATH, body)
-        self.addCleanup(self.client.delete, repo1['_href'])
-        sync_repo(self.cfg, repo1)
-        repo1 = self.client.get(repo1['_href'], params={'details': True})
+        repo = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
+        return self.client.get(repo['_href'], params={'details': True})
+
+    def copy_content_between_repos(self, recursive, criteria):
+        """Create two repos and copy content between them."""
+        # repo1
+        repo1 = self.create_sync_modular_repo()
 
         # repo2
         body = gen_repo()
@@ -157,6 +159,61 @@ class ManageModularContentTestCase(unittest.TestCase):
             }
         )
         return self.client.get(repo2['_href'], params={'details': True})
+
+    def test_remove_modulemd(self):
+        """Test sync and remove modular RPM repository."""
+        if not selectors.bug_is_fixed(3985, self.cfg.pulp_version):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/3985')
+        repo_initial = self.create_sync_modular_repo()
+        criteria = {
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.remove_module_from_repo(repo_initial, criteria)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd'],
+            repo_initial['content_unit_counts']['modulemd'] - 1,
+            repo['content_unit_counts'])
+        self.assertEqual(
+            repo['content_unit_counts']['rpm'],
+            repo_initial['content_unit_counts']['modulemd'] -
+            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo['content_unit_counts'])
+        self.assertIsNotNone(repo['last_unit_removed'], repo['last_unit_removed'])
+
+    def test_remove_modulemd_defaults(self):
+        """Test sync and remove modular RPM repository."""
+        repo_initial = self.create_sync_modular_repo()
+        criteria = {
+            'filters': {},
+            'type_ids': ['modulemd_defaults'],
+        }
+        repo = self.remove_module_from_repo(repo_initial, criteria)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            0,
+            repo['content_unit_counts'])
+
+        self.assertEqual(
+            repo['total_repository_units'],
+            (repo_initial['total_repository_units'] -
+             repo_initial['content_unit_counts']['modulemd_defaults']),
+            repo['total_repository_units']
+        )
+        self.assertIsNotNone(repo['last_unit_removed'], repo['last_unit_removed'])
+
+    def remove_module_from_repo(self, repo, criteria):
+        """Remove modules from repo."""
+        self.client.post(
+            urljoin(repo['_href'], 'actions/unassociate/'),
+            {
+                'criteria': criteria
+            }
+        )
+        return self.client.get(repo['_href'], params={'details': True})
 
 
 class PackageManagerModuleListTestCase(unittest.TestCase):
