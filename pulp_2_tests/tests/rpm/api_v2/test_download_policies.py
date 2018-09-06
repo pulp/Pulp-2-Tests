@@ -22,8 +22,8 @@ from pulp_smash.pulp2.utils import (
 from pulp_2_tests.constants import (
     RPM,
     RPM_DATA,
-    RPM_SIGNED_FEED_URL,
-    RPM_SIGNED_URL,
+    RPM_UNSIGNED_FEED_URL,
+    RPM_UNSIGNED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
@@ -66,12 +66,12 @@ def _create_repo(cfg, download_policy):
     """
     body = gen_repo()
     body['importer_config']['download_policy'] = download_policy
-    body['importer_config']['feed'] = RPM_SIGNED_FEED_URL
+    body['importer_config']['feed'] = RPM_UNSIGNED_FEED_URL
     distributor = gen_distributor()
     distributor['auto_publish'] = True
     distributor['distributor_config']['relative_url'] = body['id']
     body['distributors'] = [distributor]
-    return api.Client(cfg).post(REPOSITORY_PATH, body).json()
+    return api.Client(cfg, api.json_handler).post(REPOSITORY_PATH, body)
 
 
 class BackgroundTestCase(BaseAPITestCase):
@@ -135,7 +135,7 @@ class BackgroundTestCase(BaseAPITestCase):
     def test_rpm_checksum(self):
         """Assert the checksum of the downloaded RPM matches the metadata."""
         actual = hashlib.sha256(self.rpm.content).hexdigest()
-        expect = utils.get_sha256_checksum(RPM_SIGNED_URL)
+        expect = utils.get_sha256_checksum(RPM_UNSIGNED_URL)
         self.assertEqual(actual, expect)
 
     def test_spawned_download_task(self):
@@ -209,7 +209,7 @@ class OnDemandTestCase(BaseAPITestCase):
     def test_rpm_checksum(self):
         """Assert the checksum of the downloaded RPM matches the metadata."""
         actual = hashlib.sha256(self.rpm.content).hexdigest()
-        expect = utils.get_sha256_checksum(RPM_SIGNED_URL)
+        expect = utils.get_sha256_checksum(RPM_UNSIGNED_URL)
         self.assertEqual(actual, expect)
 
     def test_rpm_cache_lookup_header(self):
@@ -233,7 +233,7 @@ class OnDemandTestCase(BaseAPITestCase):
     def test_same_rpm_checksum(self):
         """Assert the checksum of the second RPM matches the metadata."""
         actual = hashlib.sha256(self.same_rpm.content).hexdigest()
-        expect = utils.get_sha256_checksum(RPM_SIGNED_URL)
+        expect = utils.get_sha256_checksum(RPM_UNSIGNED_URL)
         self.assertEqual(actual, expect)
 
     def test_same_rpm_cache_header(self):
@@ -244,8 +244,12 @@ class OnDemandTestCase(BaseAPITestCase):
         self.assertIn('HIT', headers['X-Cache-Lookup'], headers)
 
 
-class FixFileCorruptionTestCase(BaseAPITestCase):
-    """Ensure the "on demand" download policy can fix file corruption."""
+class FixFileCorruptionTestCase(unittest.TestCase):
+    """Ensure the "on demand" download policy can fix `file corruption`_.
+
+    .. _file corruption:
+        https://docs.pulpproject.org/user-guide/deferred-download.html#re-using-files-on-disk-when-db-is-lost
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -255,13 +259,13 @@ class FixFileCorruptionTestCase(BaseAPITestCase):
 
         1. Reset Pulp.
         2. Create a repository with the "on demand" download policy.
-        3. Sync and publish the repository.
+        3. Sync the repository.
         4. Trigger a repository download.
         5. Corrupt a file in the repository.
         6. Trigger a repository download, without unit verification.
         7. Trigger a repository download, with unit verification.
         """
-        super().setUpClass()
+        cls.cfg = config.get_config()
         if (not selectors.bug_is_fixed(1905, cls.cfg.pulp_version) and
                 os_is_rhel6(cls.cfg)):
             raise unittest.SkipTest('https://pulp.plan.io/issues/1905')
@@ -270,18 +274,21 @@ class FixFileCorruptionTestCase(BaseAPITestCase):
         # existing units.
         reset_pulp(cls.cfg)
 
-        # Create, sync and publish a repository.
-        repo = _create_repo(cls.cfg, 'on_demand')
-        cls.resources.add(repo['_href'])
-        sync_repo(cls.cfg, repo)
+        # Create and sync a repository.
+        api_client = api.Client(cls.cfg, api.json_handler)
+        body = gen_repo(
+            importer_config={
+                'feed': RPM_UNSIGNED_FEED_URL,
+                'download_policy': 'on_demand'})
+        cls.repo = api_client.post(REPOSITORY_PATH, body)
+        sync_repo(cls.cfg, cls.repo)
 
         # Trigger a repository download. Read the repo before and after.
-        api_client = api.Client(cls.cfg, api.json_handler)
-        download_path = urljoin(repo['_href'], 'actions/download/')
+        download_path = urljoin(cls.repo['_href'], 'actions/download/')
         params = {'details': True}
-        cls.repo_pre_download = api_client.get(repo['_href'], params=params)
+        cls.repo_pre_download = api_client.get(cls.repo['_href'], params=params)
         api_client.post(download_path, {'verify_all_units': False})
-        cls.repo_post_download = api_client.get(repo['_href'], params=params)
+        cls.repo_post_download = api_client.get(cls.repo['_href'], params=params)
 
         # Corrupt an RPM. The file is there, but the checksum isn't right.
         rpm_abs_path = cls.get_rpm_abs_path()
@@ -299,6 +306,12 @@ class FixFileCorruptionTestCase(BaseAPITestCase):
         cls.unverified_file_sha = cli_client.run(checksum_cmd).stdout.strip()
         api_client.post(download_path, {'verify_all_units': True})
         cls.verified_file_sha = cli_client.run(checksum_cmd).stdout.strip()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up resources."""
+        if getattr(cls, 'repo', None):
+            api.Client(cls.cfg).delete(cls.repo['_href'])
 
     @classmethod
     def get_rpm_abs_path(cls):
@@ -437,7 +450,7 @@ class SwitchPoliciesTestCase(BaseAPITestCase):
 
         # Assert the checksum of the downloaded RPM matches the metadata.
         actual = hashlib.sha256(rpm.content).hexdigest()
-        expect = utils.get_sha256_checksum(RPM_SIGNED_URL)
+        expect = utils.get_sha256_checksum(RPM_UNSIGNED_URL)
         self.assertEqual(actual, expect)
 
     def assert_background(self, repo, tasks):
@@ -493,7 +506,7 @@ class SwitchPoliciesTestCase(BaseAPITestCase):
 
         # Assert the checksum of the downloaded RPM matches the metadata.
         actual = hashlib.sha256(rpm.content).hexdigest()
-        expect = utils.get_sha256_checksum(RPM_SIGNED_URL)
+        expect = utils.get_sha256_checksum(RPM_UNSIGNED_URL)
         self.assertEqual(actual, expect)
 
         # Assert the first request resulted in a cache miss from Squid.
@@ -501,7 +514,7 @@ class SwitchPoliciesTestCase(BaseAPITestCase):
 
         # Assert the checksum of the second RPM matches the metadata.
         actual = hashlib.sha256(same_rpm.content).hexdigest()
-        expect = utils.get_sha256_checksum(RPM_SIGNED_URL)
+        expect = utils.get_sha256_checksum(RPM_UNSIGNED_URL)
         self.assertEqual(actual, expect)
 
         # Assert the second request resulted in a cache hit from Squid."""
