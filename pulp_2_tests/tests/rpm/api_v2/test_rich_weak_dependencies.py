@@ -183,9 +183,10 @@ class SearchContentTestCase(unittest.TestCase):
 class CopyRecursiveUnitsTestCase(unittest.TestCase):
     """Test copy units for a repository rich/weak dependencies.
 
-    This test targets the following issue:
+    This test targets the following issues:
 
-    `Pulp Smash #1107 <https://github.com/PulpQE/pulp-smash/issues/1107>`_.
+    * `Pulp Smash #1090 <https://github.com/PulpQE/pulp-smash/issues/1090>`_.
+    * `Pulp Smash #1107 <https://github.com/PulpQE/pulp-smash/issues/1107>`_.
     """
 
     @classmethod
