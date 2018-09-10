@@ -2,18 +2,22 @@
 """Tests that perform actions over RPM modular repositories."""
 import unittest
 from urllib.parse import urljoin
+from xml.etree import ElementTree
 
 from packaging.version import Version
-from pulp_smash import api, cli, config, selectors
+from pulp_smash import api, cli, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     publish_repo,
     sync_repo,
+    upload_import_unit,
 )
 
 from pulp_2_tests.constants import (
     MODULE_FIXTURES_PACKAGES,
     MODULE_FIXTURES_PACKAGE_STREAM,
+    RPM_NAMESPACES,
+    RPM_UNSIGNED_FEED_URL,
     RPM_WITH_MODULES_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
@@ -258,3 +262,66 @@ class PackageManagerModuleListTestCase(unittest.TestCase):
             with self.subTest(package=key):
                 module = [line for line in lines if key in line]
                 self.assertEqual(len(module), value, module)
+
+
+class UploadModuleTestCase(unittest.TestCase):
+    """Upload a module.yaml file and test upload import in Pulp repo."""
+
+    def test_all(self):
+        """Verify whether uploaded module.yaml is reflected in the pulp repo."""
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.17'):
+            raise unittest.SkipTest('This test requires at least Pulp 2.17 or newer.')
+        client = api.Client(cfg, api.json_handler)
+        # Create a normal Repo without any data.
+        body = gen_repo(
+            importer_config={'feed': RPM_UNSIGNED_FEED_URL},
+            distributors=[gen_distributor()]
+        )
+        repo = client.post(REPOSITORY_PATH, body)
+        repo = client.get(repo['_href'], params={'details': True})
+        self.addCleanup(client.delete, repo['_href'])
+        sync_repo(cfg, repo)
+
+        # download modules.yaml and upload it to pulp_repo
+        unit = self._get_module_yaml_file(RPM_WITH_MODULES_FEED_URL)
+        upload_import_unit(cfg, unit, {
+            'unit_key': {},
+            'unit_type_id': 'modulemd',
+        }, repo)
+        repo = client.get(repo['_href'], params={'details': True})
+        # Assert that `modulemd` and `modulemd_defaults` are present on the
+        # repository.
+        self.assertIsNotNone(repo['content_unit_counts']['modulemd'])
+        self.assertIsNotNone(repo['content_unit_counts']['modulemd_defaults'])
+
+    @staticmethod
+    def _get_module_yaml_file(path):
+        """Return the path to ``modules.yaml``, relative to repository root.
+
+        Given a detailed dict of information about a published, repository,
+        parse that repository's ``repomd.xml`` file and tell the path to the
+        repository's ``[…]-modules.yaml`` file. The path is likely to be in the
+        form ``repodata/[…]-modules.yaml.gz``.
+        """
+        repo_path = urljoin(path, 'repodata/repomd.xml')
+        response = utils.http_get(repo_path)
+        root_elem = ElementTree.fromstring(response)
+
+        # <ns0:repomd xmlns:ns0="http://linux.duke.edu/metadata/repo">
+        #     <ns0:data type="modules">
+        #         <ns0:checksum type="sha256">[…]</ns0:checksum>
+        #         <ns0:location href="repodata/[…]-modules.yaml.gz" />
+        #         …
+        #     </ns0:data>
+        #     …
+
+        xpath = '{{{}}}data'.format(RPM_NAMESPACES['metadata/repo'])
+        data_elements = [
+            elem for elem in root_elem.findall(xpath)
+            if elem.get('type') == 'modules'
+        ]
+        xpath = '{{{}}}location'.format(RPM_NAMESPACES['metadata/repo'])
+        relative_path = data_elements[0].find(xpath).get('href')
+        unit = utils.http_get(urljoin(path, relative_path))
+        return unit
