@@ -51,6 +51,7 @@ def write_manifest_list(cfg, manifest_list):
     dir_path = client.run('mktemp --directory'.split()).stdout.strip()
     file_path = os.path.join(dir_path, utils.uuid4() + '.json')
     manifest_list_json = json.dumps(manifest_list)
+    # machine.session is used here to keep SSH session open
     client.machine.session().run(
         "{} echo '{}' > {}".format(
             sudo,

@@ -196,11 +196,10 @@ class DisableSELinuxMixin():  # pylint:disable=too-few-public-methods
             return
 
         # Temporarily disable SELinux.
-        sudo = '' if cli.is_root(cfg) else 'sudo '
-        cmd = (sudo + 'setenforce 0').split()
-        client.run(cmd)
-        cmd = (sudo + 'setenforce 1').split()
-        self.addCleanup(client.run, cmd)
+        cmd = ('setenforce 0').split()
+        client.run(cmd, sudo=True)
+        cmd = ('setenforce 1').split()
+        self.addCleanup(client.run, cmd, sudo=True)
 
 
 class TemporaryUserMixin():
@@ -250,7 +249,6 @@ class TemporaryUserMixin():
         be left in place.
         """
         client = cli.Client(cfg)
-        sudo = '' if cli.is_root(cfg) else 'sudo '
 
         # According to useradd(8), usernames may be up to 32 characters long.
         # But long names break the rsync publish process: (SNIP == username)
@@ -261,17 +259,17 @@ class TemporaryUserMixin():
         #
         username = utils.uuid4()[:12]
         cmd = 'useradd --create-home {0}'
-        client.run((sudo + cmd.format(username)).split())
+        client.run((cmd.format(username)).split(), sudo=True)
         yield username
 
-        cmd = 'runuser --shell /bin/sh {} --command'.format(username)
-        cmd = (sudo + cmd).split()
+        cmd = 'runuser --shell /bin/sh {} --command'.format(username).split()
         cmd.append('ssh-keygen -N "" -f /home/{}/.ssh/mykey'.format(username))
-        client.run(cmd)
+        client.run(cmd, sudo=True)
         cmd = 'cp /home/{0}/.ssh/mykey.pub /home/{0}/.ssh/authorized_keys'
-        client.run((sudo + cmd.format(username)).split())
+        client.run((cmd.format(username)).split(), sudo=True)
         cmd = 'cat /home/{0}/.ssh/mykey'
-        private_key = client.run((sudo + cmd.format(username)).split()).stdout
+        private_key = client.run(
+            (cmd.format(username)).split(), sudo=True).stdout
         yield private_key
 
     @staticmethod
@@ -287,7 +285,6 @@ class TemporaryUserMixin():
            limit is exceeded.
         2. Delete ``username``.
         """
-        sudo = () if cli.is_root(cfg) else ('sudo',)
         client = cli.Client(cfg)
 
         # values are arbitrary
@@ -295,11 +292,11 @@ class TemporaryUserMixin():
         iter_limit = 15  # unitless
 
         # Wait for user's processes to die.
-        cmd = sudo + ('ps', '-wwo', 'args', '--user', username, '--no-headers')
+        cmd = ('ps', '-wwo', 'args', '--user', username, '--no-headers')
         i = 0
         while i <= iter_limit:
             try:
-                user_processes = client.run(cmd).stdout.splitlines()
+                user_processes = client.run(cmd, sudo=True).stdout.splitlines()
             except exceptions.CalledProcessError:
                 break
             i += 1
@@ -312,8 +309,8 @@ class TemporaryUserMixin():
             )
 
         # Delete user.
-        cmd = sudo + ('userdel', '--remove', username)
-        client.run(cmd)
+        cmd = ('userdel', '--remove', username)
+        client.run(cmd, sudo=True)
 
     def write_private_key(self, cfg, private_key):
         """Write the given private key to a file on disk.
@@ -326,22 +323,24 @@ class TemporaryUserMixin():
             host being targeted.
         :returns: The path to the private key on disk, as a string.
         """
-        sudo = '' if cli.is_root(cfg) else 'sudo '
         client = cli.Client(cfg)
         ssh_identity_file = client.run(['mktemp']).stdout.strip()
-        self.addCleanup(client.run, (sudo + 'rm ' + ssh_identity_file).split())
+        self.addCleanup(
+            client.run, ('rm ' + ssh_identity_file).split(), sudo=True)
+        # machine.session is used here to keep SSH session open
         client.machine.session().run(
             "echo '{}' > {}".format(private_key, ssh_identity_file)
         )
         client.run(['chmod', '600', ssh_identity_file])
-        client.run((sudo + 'chown apache ' + ssh_identity_file).split())
+        client.run(('chown apache ' + ssh_identity_file).split(), sudo=True)
         # Pulp's SELinux policy requires files handled by Pulp to have the
         # httpd_sys_rw_content_t label
         enforcing = client.run(['getenforce']).stdout.strip()
         if enforcing.lower() != 'disabled':
             client.run(
-                (sudo + 'chcon -t httpd_sys_rw_content_t ' + ssh_identity_file)
-                .split()
+                ('chcon -t httpd_sys_rw_content_t ' + ssh_identity_file)
+                .split(),
+                sudo=True
             )
         return ssh_identity_file
 
@@ -419,17 +418,16 @@ def set_pulp_manage_rsync(cfg, boolean):
     :returns: Information about the executed command, or ``None`` if no command
         was executed.
     """
-    sudo = () if cli.is_root(cfg) else ('sudo',)
     client = cli.Client(cfg)
     try:
         # setsebool is installed at /usr/sbin/setsebool on some distros, and
         # requires root privileges to discover.
-        client.run(sudo + ('which', 'setsebool'))
+        client.run(('which', 'setsebool'), sudo=True)
     except exceptions.CalledProcessError:
         return None
-    cmd = sudo + ('setsebool', 'pulp_manage_rsync')
+    cmd = ('setsebool', 'pulp_manage_rsync')
     cmd += ('on',) if boolean else ('off',)
-    return client.run(cmd)
+    return client.run(cmd, sudo=True)
 
 
 def get_rpm_names_versions(cfg, repo):

@@ -24,10 +24,10 @@ def get_pulp_worker_procs(cfg):
         deployment being targeted.
     :return: An iterable of strings, one per line of matching output.
     """
-    sudo = () if cli.is_root(cfg) else ('sudo',)
-    cmd = sudo + ('ps', 'aux')
+    cmd = ('ps', 'aux')
     return tuple((
-        proc for proc in cli.Client(cfg).run(cmd).stdout.splitlines()
+        proc for proc
+        in cli.Client(cfg).run(cmd, sudo=True).stdout.splitlines()
         if 'celery worker' in proc and 'resource_manager' not in proc
     ))
 
@@ -64,13 +64,12 @@ class MaxTasksPerChildTestCase(unittest.TestCase):
         if os_is_f27(cfg) and not pulp_3540_testable:
             self.skipTest('https://pulp.plan.io/issues/3540')
         svc_mgr = cli.GlobalServiceManager(cfg)
-        sudo = () if cli.is_root(cfg) else ('sudo',)
-        set_cmd = sudo + (
+        set_cmd = (
             'sed', '-i', '-e',
             's/.*PULP_MAX_TASKS_PER_CHILD=[0-9]*$/PULP_MAX_TASKS_PER_CHILD=2/',
             '/etc/default/pulp_workers'
         )
-        unset_cmd = sudo + (
+        unset_cmd = (
             'sed', '-i', '-e',
             's/^PULP_MAX_TASKS_PER_CHILD=2$/# PULP_MAX_TASKS_PER_CHILD=2/',
             '/etc/default/pulp_workers'
@@ -84,11 +83,11 @@ class MaxTasksPerChildTestCase(unittest.TestCase):
 
         # Step 2
         client = cli.Client(cfg)
-        client.run(set_cmd)
+        client.run(set_cmd, sudo=True)
         self.addCleanup(svc_mgr.restart, PULP_SERVICES)
         if not pulp_3540_testable:
             self.addCleanup(time.sleep, 30)
-        self.addCleanup(client.run, unset_cmd)
+        self.addCleanup(client.run, unset_cmd, sudo=True)
         svc_mgr.restart(PULP_SERVICES)
         procs_over_time.append(get_pulp_worker_procs(cfg))
         for proc in procs_over_time[-1]:

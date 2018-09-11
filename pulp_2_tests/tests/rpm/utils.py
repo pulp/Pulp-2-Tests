@@ -215,6 +215,7 @@ def gen_yum_config_file(cfg, repositoryid, baseurl, name, **kwargs):
         section.write('[{}]\n'.format(repositoryid))
         for key, value in kwargs.items():
             section.write('{}: {}\n'.format(key, value))
+        # machine.session is used here to keep SSH session open
         cli.Client(cfg).machine.session().run(
             'echo "{}" | {}tee {} > /dev/null'.format(
                 section.getvalue(),

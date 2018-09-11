@@ -72,8 +72,7 @@ class ValidHeadersTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """Destroy the created content source."""
-        sudo = () if cli.is_root(cls.cfg) else ('sudo',)
-        cli.Client(cls.cfg).run(sudo + ('rm', '-f', cls.cs_path))
+        cli.Client(cls.cfg).run(('rm', '-f', cls.cs_path), sudo=True)
 
 
 class InvalidHeadersTestCase(unittest.TestCase):
@@ -122,8 +121,7 @@ class InvalidHeadersTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """Destroy the created content source."""
-        sudo = () if cli.is_root(cls.cfg) else ('sudo',)
-        cli.Client(cls.cfg).run(sudo + ('rm', '-f', cls.cs_path))
+        cli.Client(cls.cfg).run(('rm', '-f', cls.cs_path), sudo=True)
 
 
 def _gen_content_source(cfg, content_source_body):
@@ -136,6 +134,7 @@ def _gen_content_source(cfg, content_source_body):
     sudo = '' if cli.is_root(cfg) else 'sudo'
     path = os.path.join(CONTENT_SOURCES_PATH, utils.uuid4() + '.conf')
     client = cli.Client(cfg)
+    # machine.session is used here to keep SSH session open
     client.machine.session().run(
         "{} bash -c \"echo >'{}' '{}'\""
         .format(sudo, path, content_source_body)

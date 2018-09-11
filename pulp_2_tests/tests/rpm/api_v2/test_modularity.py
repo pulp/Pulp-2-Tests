@@ -181,7 +181,6 @@ class PackageManagerModuleListTestCase(unittest.TestCase):
         sync_repo(cfg, repo)
         publish_repo(cfg, repo)
         repo = client.get(repo['_href'], params={'details': True})
-        sudo = () if cli.is_root(cfg) else ('sudo',)
         repo_path = gen_yum_config_file(
             cfg,
             baseurl=urljoin(cfg.get_base_url(), urljoin(
@@ -192,10 +191,10 @@ class PackageManagerModuleListTestCase(unittest.TestCase):
             repositoryid=repo['id']
         )
         cli_client = cli.Client(cfg)
-        self.addCleanup(cli_client.run, sudo + ('rm', repo_path))
+        self.addCleanup(cli_client.run, ('rm', repo_path), sudo=True)
         lines = cli_client.run((
-            sudo + ('dnf', 'module', 'list', '--all')
-        )).stdout.splitlines()
+            ('dnf', 'module', 'list', '--all')
+        ), sudo=True).stdout.splitlines()
         for key, value in MODULE_FIXTURES_PACKAGES.items():
             with self.subTest(package=key):
                 module = [line for line in lines if key in line]

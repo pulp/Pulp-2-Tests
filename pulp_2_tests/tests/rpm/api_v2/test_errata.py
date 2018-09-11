@@ -75,7 +75,6 @@ class ApplyErratumTestCase(unittest.TestCase):
 
         Also, schedule it for deletion. Return nothing.
         """
-        sudo = () if cli.is_root(cfg) else ('sudo',)
         repo_path = gen_yum_config_file(
             cfg,
             baseurl=urljoin(cfg.get_base_url(), urljoin(
@@ -85,7 +84,7 @@ class ApplyErratumTestCase(unittest.TestCase):
             name=repo['_href'],
             repositoryid=repo['id']
         )
-        self.addCleanup(cli.Client(cfg).run, sudo + ('rm', repo_path))
+        self.addCleanup(cli.Client(cfg).run, ('rm', repo_path), sudo=True)
 
     def _get_upgrade_targets(self, cfg):
         """Get a tuple of upgrade targets for erratum RHEA-2012:0055."""
@@ -99,10 +98,9 @@ class ApplyErratumTestCase(unittest.TestCase):
         self.assertIn(yum_or_dnf, ('yum', 'dnf'))
         if yum_or_dnf == 'yum':
             return ('--advisory', erratum)
-        sudo = () if cli.is_root(cfg) else ('sudo',)
-        lines = cli.Client(cfg).run(sudo + (
+        lines = cli.Client(cfg).run((
             'dnf', '--quiet', 'updateinfo', 'list', erratum
-        )).stdout.strip().splitlines()
+        ), sudo=True).stdout.strip().splitlines()
         return tuple((line.split()[2] for line in lines))
 
 
