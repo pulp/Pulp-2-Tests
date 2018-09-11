@@ -10,6 +10,7 @@ help:
 	@echo "  docs-clean     to remove documentation"
 	@echo "  docs-html      to generate HTML documentation"
 	@echo "  docs-tests     to (re)generate .rst files for the tests"
+	@echo "  install-dev    to install in editable mode with development dependencies"
 	@echo "  lint           to run all linters"
 	@echo "  lint-flake8    to run the flake8 linter"
 	@echo "  lint-pylint    to run the pylint linter"
@@ -20,7 +21,7 @@ help:
 # is compiled, and Sphinx does not needlessly recompile.) More broadly, we
 # order dependencies by execution time and (anecdotal) likelihood of finding
 # issues.
-all: dist-clean lint docs-clean docs-html dist
+all: dist-clean lint docs-clean docs-html dist install-dev
 
 dist:
 	./setup.py --quiet sdist bdist_wheel --universal
@@ -37,6 +38,9 @@ docs-html: docs-tests
 docs-tests:
 	rm -rf docs/tests/*
 	scripts/gen_docs_tests.sh
+
+install-dev:
+	pip install -q -e .[dev]
 
 lint: lint-flake8 lint-pylint
 
@@ -58,4 +62,4 @@ publish: dist
 	twine upload dist/*
 
 .PHONY: help all dist-clean docs-clean docs-html docs-tests lint lint-flake8 \
-    lint-pylint publish
+    lint-pylint publish install-dev
