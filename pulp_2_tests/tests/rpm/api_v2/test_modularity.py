@@ -42,8 +42,6 @@ class ManageModularContentTestCase(unittest.TestCase):
         cls.cfg = config.get_config()
         if cls.cfg.pulp_version < Version('2.17'):
             raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
-        if not os_support_modularity(cls.cfg):
-            raise unittest.SkipTest('This test requires an OS that supports modularity.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_sync_publish_repo(self):
@@ -182,7 +180,10 @@ class ManageModularContentTestCase(unittest.TestCase):
             repo_initial['content_unit_counts']['modulemd'] -
             MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
             repo['content_unit_counts'])
-        self.assertIsNotNone(repo['last_unit_removed'], repo['last_unit_removed'])
+        self.assertIsNotNone(
+            repo['last_unit_removed'],
+            repo['last_unit_removed']
+        )
 
     def test_remove_modulemd_defaults(self):
         """Test sync and remove modular RPM repository."""
@@ -203,15 +204,16 @@ class ManageModularContentTestCase(unittest.TestCase):
              repo_initial['content_unit_counts']['modulemd_defaults']),
             repo['total_repository_units']
         )
-        self.assertIsNotNone(repo['last_unit_removed'], repo['last_unit_removed'])
+        self.assertIsNotNone(
+            repo['last_unit_removed'],
+            repo['last_unit_removed']
+        )
 
     def remove_module_from_repo(self, repo, criteria):
         """Remove modules from repo."""
         self.client.post(
             urljoin(repo['_href'], 'actions/unassociate/'),
-            {
-                'criteria': criteria
-            }
+            {'criteria': criteria}
         )
         return self.client.get(repo['_href'], params={'details': True})
 
