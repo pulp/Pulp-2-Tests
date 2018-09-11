@@ -216,18 +216,18 @@ class _RsyncDistUtilsMixin():  # pylint:disable=too-few-public-methods
         if num_units is None:
             num_units = RPM_SIGNED_FEED_COUNT
         cli_client = cli.Client(cfg)
-        sudo = () if cli.is_root(cfg) else ('sudo',)
         path = distributor_cfg['config']['remote']['root']
         remote_units_path = (
             distributor_cfg['config'].get('remote_units_path', 'content/units')
         )
         for segment in _split_path(remote_units_path):
-            cmd = sudo + ('ls', '-1', path)
-            files = set(cli_client.run(cmd).stdout.strip().split('\n'))
+            cmd = ('ls', '-1', path)
+            files = set(
+                cli_client.run(cmd, sudo=True).stdout.strip().split('\n'))
             self.assertIn(segment, files)
             path = os.path.join(path, segment)
-        cmd = sudo + ('find', path, '-name', '*.rpm')
-        files = cli_client.run(cmd).stdout.strip().split('\n')
+        cmd = ('find', path, '-name', '*.rpm')
+        files = cli_client.run(cmd, sudo=True).stdout.strip().split('\n')
         self.assertEqual(len(files), num_units, files)
 
     @staticmethod
@@ -244,9 +244,8 @@ class _RsyncDistUtilsMixin():  # pylint:disable=too-few-public-methods
         :returns: set of file/directory names
         """
         path = distributor_cfg['config']['remote']['root']
-        sudo = () if cli.is_root(cfg) else ('sudo',)
-        cmd = sudo + ('ls', '-1', path)
-        return set(cli.Client(cfg).run(cmd).stdout.splitlines())
+        cmd = ('ls', '-1', path)
+        return set(cli.Client(cfg).run(cmd, sudo=True).stdout.splitlines())
 
 
 class PublishBeforeYumDistTestCase(
@@ -341,7 +340,6 @@ class ForceFullTestCase(
         """Use the ``force_full`` RPM rsync distributor option."""
         cfg = config.get_config()
         cli_client = cli.Client(cfg)
-        sudo = '' if cli.is_root(cfg) else 'sudo '
 
         # Create a user and repo with an importer and distribs. Sync the repo.
         ssh_user, priv_key = self.make_user(cfg)
@@ -364,8 +362,8 @@ class ForceFullTestCase(
 
         # Remove all files from the target directory, and publish again. Verify
         # that the RPM rsync distributor didn't place any files.
-        cmd = sudo + 'rm -rf /home/{}/content'.format(ssh_user)
-        cli_client.run(cmd.split())
+        cmd = 'rm -rf /home/{}/content'.format(ssh_user)
+        cli_client.run(cmd.split(), sudo=True)
         self.verify_publish_is_skip(cfg, publish_repo(
             cfg,
             repo,
@@ -621,9 +619,7 @@ class DeleteTestCase(
             yum_distributor['config']['relative_url'],
         )
         cmd = ['find', path, '-name', '*.rpm']
-        if not cli.is_root(cfg):
-            cmd.insert(0, 'sudo')
-        files = cli.Client(cfg).run(cmd).stdout.strip().split('\n')
+        files = cli.Client(cfg).run(cmd, sudo=True).stdout.strip().split('\n')
         self.assertEqual(files, [''])  # strange, but correct
 
 

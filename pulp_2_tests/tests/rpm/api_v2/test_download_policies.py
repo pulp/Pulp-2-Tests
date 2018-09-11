@@ -286,26 +286,32 @@ class FixFileCorruptionTestCase(unittest.TestCase):
         # Trigger a repository download. Read the repo before and after.
         download_path = urljoin(cls.repo['_href'], 'actions/download/')
         params = {'details': True}
-        cls.repo_pre_download = api_client.get(cls.repo['_href'], params=params)
+        cls.repo_pre_download = api_client.get(
+            cls.repo['_href'], params=params)
         api_client.post(download_path, {'verify_all_units': False})
-        cls.repo_post_download = api_client.get(cls.repo['_href'], params=params)
+        cls.repo_post_download = api_client.get(
+            cls.repo['_href'], params=params)
 
         # Corrupt an RPM. The file is there, but the checksum isn't right.
         rpm_abs_path = cls.get_rpm_abs_path()
         cli_client = cli.Client(cls.cfg)
-        sudo = '' if cli.is_root(cls.cfg) else 'sudo '
-        checksum_cmd = (sudo + 'sha256sum ' + rpm_abs_path).split()
-        cls.sha_pre_corruption = cli_client.run(checksum_cmd).stdout.strip()
-        cli_client.run((sudo + 'rm ' + rpm_abs_path).split())
-        cli_client.run((sudo + 'touch ' + rpm_abs_path).split())
-        cli_client.run((sudo + 'chown apache:apache ' + rpm_abs_path).split())
-        cls.sha_post_corruption = cli_client.run(checksum_cmd).stdout.strip()
+        checksum_cmd = ('sha256sum ' + rpm_abs_path).split()
+        cls.sha_pre_corruption = cli_client.run(
+            checksum_cmd, sudo=True).stdout.strip()
+        cli_client.run(('rm ' + rpm_abs_path).split(), sudo=True)
+        cli_client.run(('touch ' + rpm_abs_path).split(), sudo=True)
+        cli_client.run(
+            ('chown apache:apache ' + rpm_abs_path).split(), sudo=True)
+        cls.sha_post_corruption = cli_client.run(
+            checksum_cmd, sudo=True).stdout.strip()
 
         # Trigger repository downloads that don't and do checksum files, resp.
         api_client.post(download_path, {'verify_all_units': False})
-        cls.unverified_file_sha = cli_client.run(checksum_cmd).stdout.strip()
+        cls.unverified_file_sha = cli_client.run(
+            checksum_cmd, sudo=True).stdout.strip()
         api_client.post(download_path, {'verify_all_units': True})
-        cls.verified_file_sha = cli_client.run(checksum_cmd).stdout.strip()
+        cls.verified_file_sha = cli_client.run(
+            checksum_cmd, sudo=True).stdout.strip()
 
     @classmethod
     def tearDownClass(cls):

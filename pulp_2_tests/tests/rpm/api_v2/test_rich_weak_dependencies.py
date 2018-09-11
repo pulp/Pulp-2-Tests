@@ -121,7 +121,6 @@ class PackageManagerConsumeRPMTestCase(unittest.TestCase):
         repo = client.get(repo['_href'], params={'details': True})
         sync_repo(cfg, repo)
         publish_repo(cfg, repo)
-        sudo = () if cli.is_root(cfg) else ('sudo',)
         repo_path = gen_yum_config_file(
             cfg,
             baseurl=urljoin(cfg.get_base_url(), urljoin(
@@ -132,7 +131,7 @@ class PackageManagerConsumeRPMTestCase(unittest.TestCase):
             repositoryid=repo['id']
         )
         cli_client = cli.Client(cfg)
-        self.addCleanup(cli_client.run, sudo + ('rm', repo_path))
+        self.addCleanup(cli_client.run, ('rm', repo_path), sudo=True)
         rpm_name = 'Cobbler'
         pkg_mgr = cli.PackageManager(cfg)
         pkg_mgr.install(rpm_name)

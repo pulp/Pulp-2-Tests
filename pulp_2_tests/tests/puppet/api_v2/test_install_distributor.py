@@ -42,18 +42,22 @@ class InstallDistributorTestCase(BaseAPITestCase):
                 os_is_f27(self.cfg)):
             self.skipTest('https://pulp.plan.io/issues/3314')
         cli_client = cli.Client(self.cfg)
-        sudo = () if cli.is_root(self.cfg) else ('sudo',)
 
         # Create a directory and make sure Pulp can write to it.
         install_path = cli_client.run(('mktemp', '--directory')).stdout.strip()
-        self.addCleanup(cli_client.run, sudo + ('rm', '-rf', install_path))
-        cli_client.run(sudo + ('chown', 'apache:apache', install_path))
-        cli_client.run(sudo + ('chcon', '-t', 'puppet_etc_t', install_path))
+        self.addCleanup(cli_client.run, ('rm', '-rf', install_path), sudo=True)
+        cli_client.run(('chown', 'apache:apache', install_path), sudo=True)
+        cli_client.run(
+            ('chcon', '-t', 'puppet_etc_t', install_path), sudo=True)
 
         # Make sure the pulp_manage_puppet boolean is enabled
-        cli_client.run(sudo + ('setsebool', 'pulp_manage_puppet', 'on'))
-        self.addCleanup(cli_client.run, sudo + (
-            'setsebool', 'pulp_manage_puppet', 'off'))
+        cli_client.run(('setsebool', 'pulp_manage_puppet', 'on'), sudo=True)
+
+        self.addCleanup(
+            cli_client.run,
+            ('setsebool', 'pulp_manage_puppet', 'off'),
+            sudo=True
+        )
 
         # Create and populate a Puppet repository.
         distributor = gen_install_distributor()
@@ -70,10 +74,10 @@ class InstallDistributorTestCase(BaseAPITestCase):
 
         # Publish, and verify the module is present. (Dir has 700 permissions.)
         publish_repo(self.cfg, repo)
-        proc = cli_client.run(sudo + (
+        proc = cli_client.run((
             'runuser', '--shell', '/bin/sh', '--command',
             'ls -1 {}'.format(install_path), '-', 'apache'
-        ))
+        ), sudo=True)
         self.assertIn(PUPPET_MODULE_1['name'], proc.stdout.split('\n'), proc)
 
 

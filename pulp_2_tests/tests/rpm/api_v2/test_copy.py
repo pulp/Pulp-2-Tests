@@ -118,6 +118,7 @@ class MtimeTestCase(unittest.TestCase):
             repo['distributors'][0]['config']['relative_url'],
             'repodata',
         ))
+        # machine.session is used here to keep SSH session open
         mtimes_pre = (
             cli_client.machine.session().run(cmd)[1].strip().split().sort()
         )
@@ -129,6 +130,7 @@ class MtimeTestCase(unittest.TestCase):
 
         # Get the mtime of the sqlite files again.
         time.sleep(1)
+        # machine.session is used here to keep SSH session open
         mtimes_post = (
             cli_client.machine.session().run(cmd)[1].strip().split().sort()
         )

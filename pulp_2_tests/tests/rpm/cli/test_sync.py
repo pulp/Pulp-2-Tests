@@ -127,10 +127,8 @@ class ForceSyncTestCase(_BaseTestCase):
         rpms = self._list_rpms(cfg)
         rpm = random.choice(rpms)
         cmd = []
-        if not cli.is_root(cfg):
-            cmd.append('sudo')
         cmd.extend(('rm', '-rf', rpm))
-        client.run(cmd)
+        client.run(cmd, sudo=True)
         with self.subTest(comment='verify the rpm has been removed'):
             self.assertEqual(len(self._list_rpms(cfg)), len(rpms) - 1, rpm)
 

@@ -50,6 +50,7 @@ class MissingWorkersTestCase(unittest.TestCase):
         if not selectors.bug_is_fixed(2835, self.cfg.pulp_version):
             self.skipTest('https://pulp.plan.io/issues/2835')
         sudo = '' if cli.is_root(self.cfg) else 'sudo'
+        # machine.session is used here to keep SSH session open
         cli.Client(self.cfg).machine.session().run(
             "{} bash -c 'echo PULP_CONCURRENCY=1 >> {}'"
             .format(sudo, _PULP_WORKERS_CFG)
@@ -84,9 +85,9 @@ class MissingWorkersTestCase(unittest.TestCase):
 
         Reset Pulp because :meth:`test_all` may break Pulp.
         """
-        sudo = () if cli.is_root(self.cfg) else ('sudo',)
         # Delete last line from file.
-        cli.Client(self.cfg).run(sudo + ('sed', '-i', '$d', _PULP_WORKERS_CFG))
+        cli.Client(self.cfg).run(
+            ('sed', '-i', '$d', _PULP_WORKERS_CFG), sudo=True)
         reset_pulp(self.cfg)
 
 

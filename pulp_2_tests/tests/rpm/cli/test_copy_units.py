@@ -222,7 +222,6 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
             raise unittest.SkipTest('https://pulp.plan.io/issues/2620')
         client = cli.Client(cfg)
         pkg_mgr = cli.PackageManager(cfg)
-        sudo = () if cli.is_root(cfg) else ('sudo',)
 
         # Create the second repository.
         repo_id = self.create_repo(cfg)
@@ -241,7 +240,7 @@ class UpdateRpmTestCase(UtilsMixin, unittest.TestCase):
             name=repo_id,
             repositoryid=repo_id
         )
-        self.addCleanup(client.run, sudo + ('rm', repo_path))
+        self.addCleanup(client.run, ('rm', repo_path), sudo=True)
         pkg_mgr.install(rpm_name)
         self.addCleanup(pkg_mgr.uninstall, rpm_name)
         client.run(('rpm', '-q', rpm_name))

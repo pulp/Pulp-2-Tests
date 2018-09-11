@@ -108,28 +108,27 @@ class PulpDistributionTestCase(BaseAPITestCase):
         self.assertEqual(repo['content_unit_counts']['distribution'], 1)
         cli_client = cli.Client(self.cfg, cli.code_handler)
         relative_url = repo['distributors'][0]['config']['relative_url']
-        sudo = () if cli.is_root(self.cfg) else ('sudo',)
-        pulp_distribution = cli_client.run(sudo + (
+        pulp_distribution = cli_client.run((
             'cat',
             os.path.join(
                 '/var/lib/pulp/published/yum/http/repos/',
                 relative_url,
                 'PULP_DISTRIBUTION.xml',
             ),
-        )).stdout
+        ), sudo=True).stdout
         # make sure published repository PULP_DISTRIBUTION.xml does not include
         # any extra file from the original repo's PULP_DISTRIBUTION.xml under
         # metadata directory
         self.assertNotIn('metadata/productid', pulp_distribution)
 
-        release_info = cli_client.run(sudo + (
+        release_info = cli_client.run((
             'cat',
             os.path.join(
                 '/var/lib/pulp/published/yum/http/repos/',
                 relative_url,
                 'release-notes/release-info',
             ),
-        )).stdout
+        ), sudo=True).stdout
         response = requests.get(urljoin(
             urljoin(RPM_WITH_PULP_DISTRIBUTION_FEED_URL, 'release-notes/'),
             'release-info',

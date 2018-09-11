@@ -86,20 +86,6 @@ class ExportDirMixin(DisableSELinuxMixin):
     `pulp_smash.config.PulpSmashConfig``.
     """
 
-    def __init__(self, *args, **kwargs):
-        """Initialize variables."""
-        self.__sudo = None
-        super().__init__(*args, **kwargs)
-
-    def sudo(self):
-        """Return either ``''`` or ``'sudo '``.
-
-        Return the former if root, and the latter if not.
-        """
-        if self.__sudo is None:
-            self.__sudo = '' if cli.is_root(self.cfg) else 'sudo '
-        return self.__sudo
-
     def create_export_dir(self):
         """Create a directory, and ensure Pulp can export to it.
 
@@ -125,8 +111,8 @@ class ExportDirMixin(DisableSELinuxMixin):
         client = cli.Client(self.cfg)
         export_dir = client.run('mktemp --directory'.split()).stdout.strip()
         self.addCleanup(
-            client.run, (self.sudo() + 'rm -rf {} ' + export_dir).split())
-        client.run((self.sudo() + 'chown apache ' + export_dir).split())
+            client.run, ('rm -rf {} ' + export_dir).split(), sudo=True)
+        client.run(('chown apache ' + export_dir).split(), sudo=True)
         return export_dir
 
     def change_export_dir_owner(self, export_dir):
@@ -137,7 +123,7 @@ class ExportDirMixin(DisableSELinuxMixin):
         client = cli.Client(self.cfg)
         uid = client.run('id -u'.split()).stdout.strip()
         client.run(
-            (self.sudo() + 'chown -R {} {}'.format(uid, export_dir)).split())
+            ('chown -R {} {}'.format(uid, export_dir)).split(), sudo=True)
 
     def publish_to_dir(self, entity_href, distributor_id):
         """Create an export directory, publish to it, and change its owner.
@@ -276,17 +262,17 @@ class BaseExportChecksumTypeTestCase(ExportDirMixin, BaseAPITestCase):
                 iso_path = client.run('mktemp'.split()).stdout.strip()
                 self.addCleanup(
                     client.run,
-                    '{}rm -rf {} {}'.format(
-                        self.sudo(), export_dir, iso_path
-                    ).split()
+                    'rm -rf {} {}'.format(export_dir, iso_path).split(),
+                    sudo=True
                 )
                 client.run(
                     'curl --insecure -o {} {}'.format(iso_path, url).split())
-                client.run((self.sudo() + 'mount -o loop {} {}'.format(
-                    iso_path, export_dir)).split())
+                client.run(('mount -o loop {} {}'.format(
+                    iso_path, export_dir)).split(), sudo=True)
                 self.addCleanup(
                     client.run,
-                    (self.sudo() + 'umount {}'.format(export_dir)).split()
+                    ('umount {}'.format(export_dir)).split(),
+                    sudo=True
                 )
                 self._assert_checksum_type(
                     self.get_repomd_iso_publish_path(export_dir, distributor),

@@ -48,8 +48,7 @@ class BaseTestCase(unittest.TestCase):
         cls.cfg = config.get_config()
         if not selectors.bug_is_fixed(2186, cls.cfg.pulp_version):
             raise unittest.SkipTest('https://pulp.plan.io/issues/2186')
-        cls.cmd = () if cli.is_root(cls.cfg) else ('sudo',)
-        cls.cmd += (
+        cls.cmd = (
             'runuser', '--shell', '/bin/sh', '--command', 'pulp-manage-db',
             '-', 'apache'
         )
@@ -71,18 +70,17 @@ class PositiveTestCase(BaseTestCase):
             'pulp_resource_manager',
             'pulp_workers',
         ))
-        cli.Client(self.cfg).run(self.cmd)
+        cli.Client(self.cfg).run(self.cmd, sudo=True)
 
     def test_dry_run(self):
         """Make sure pulp-manage-db runs if --dry-run is passed."""
         if not selectors.bug_is_fixed(2776, self.cfg.pulp_version):
             self.skipTest('https://pulp.plan.io/issues/2776')
-        cmd = () if cli.is_root(self.cfg) else ('sudo',)
-        cmd += (
+        cmd = (
             'runuser', '--shell', '/bin/sh', '--command',
             'pulp-manage-db --dry-run', '-', 'apache'
         )
-        cli.Client(self.cfg).run(cmd)
+        cli.Client(self.cfg).run(cmd, sudo=True)
 
 
 class NegativeTestCase(BaseTestCase):
