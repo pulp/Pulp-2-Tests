@@ -133,6 +133,7 @@ MODULE_FIXTURES_PACKAGES = {'duck': 3, 'kangaroo': 2, 'walrus': 2}
 MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType({
     'name': 'walrus',
     'stream': '0.71',
+    'new_stream': '5.21',
     'rpm_count': 4,
     'total_available_units': 5,
 })
