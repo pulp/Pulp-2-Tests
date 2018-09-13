@@ -21,7 +21,7 @@ help:
 # is compiled, and Sphinx does not needlessly recompile.) More broadly, we
 # order dependencies by execution time and (anecdotal) likelihood of finding
 # issues.
-all: dist-clean lint docs-clean docs-html dist install-dev
+all: dist-clean lint docs-clean docs-html dist
 
 dist:
 	./setup.py --quiet sdist bdist_wheel --universal
