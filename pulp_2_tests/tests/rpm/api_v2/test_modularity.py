@@ -267,33 +267,67 @@ class PackageManagerModuleListTestCase(unittest.TestCase):
 class UploadModuleTestCase(unittest.TestCase):
     """Upload a module.yaml file and test upload import in Pulp repo."""
 
-    def test_all(self):
+    @classmethod
+    def setUpClass(cls):
+        """Create class wide variables."""
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.17'):
+            raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
+        cls.client = api.Client(cls.cfg, api.json_handler)
+
+    def test_upload_module(self):
         """Verify whether uploaded module.yaml is reflected in the pulp repo."""
-        cfg = config.get_config()
-        if cfg.pulp_version < Version('2.17'):
-            raise unittest.SkipTest('This test requires at least Pulp 2.17 or newer.')
-        client = api.Client(cfg, api.json_handler)
         # Create a normal Repo without any data.
         body = gen_repo(
             importer_config={'feed': RPM_UNSIGNED_FEED_URL},
             distributors=[gen_distributor()]
         )
-        repo = client.post(REPOSITORY_PATH, body)
-        repo = client.get(repo['_href'], params={'details': True})
-        self.addCleanup(client.delete, repo['_href'])
-        sync_repo(cfg, repo)
+        repo = self.client.post(REPOSITORY_PATH, body)
+        repo = self.client.get(repo['_href'], params={'details': True})
+        self.addCleanup(self.client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
 
         # download modules.yaml and upload it to pulp_repo
         unit = self._get_module_yaml_file(RPM_WITH_MODULES_FEED_URL)
-        upload_import_unit(cfg, unit, {
+        upload_import_unit(self.cfg, unit, {
             'unit_key': {},
             'unit_type_id': 'modulemd',
         }, repo)
-        repo = client.get(repo['_href'], params={'details': True})
+        repo = self.client.get(repo['_href'], params={'details': True})
         # Assert that `modulemd` and `modulemd_defaults` are present on the
         # repository.
         self.assertIsNotNone(repo['content_unit_counts']['modulemd'])
         self.assertIsNotNone(repo['content_unit_counts']['modulemd_defaults'])
+
+    def test_one_default_per_repo(self):
+        """Verify changing the modules default content of modules.yaml do not affects repo."""
+        # create repo
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            distributors=[gen_distributor()]
+        )
+        repo = self.client.post(REPOSITORY_PATH, body)
+        repo = self.client.get(repo['_href'], params={'details': True})
+        self.addCleanup(self.client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
+
+        # Modify Modules.yaml and upload
+        unit = self._get_module_yaml_file(RPM_WITH_MODULES_FEED_URL)
+        unit_string = unit.decode('utf-8')
+        unit_string = unit_string.replace(
+            'stream: {}'.format(MODULE_FIXTURES_PACKAGE_STREAM['stream']),
+            'stream: {}'.format(MODULE_FIXTURES_PACKAGE_STREAM['new_stream'])
+        )
+        unit = unit_string.encode()
+        upload_import_unit(self.cfg, unit, {
+            'unit_key': {},
+            'unit_type_id': 'modulemd',
+        }, repo)
+        repo = self.client.get(repo['_href'], params={'details': True})
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            3,
+            repo['content_unit_counts'])
 
     @staticmethod
     def _get_module_yaml_file(path):
