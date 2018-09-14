@@ -8,6 +8,7 @@ from os.path import basename
 from urllib.parse import urljoin
 from xml.etree import ElementTree
 
+import requests
 from packaging.version import Version
 from pulp_smash import api, cli, exceptions, selectors, utils
 from pulp_smash.pulp2.utils import search_units
@@ -120,6 +121,52 @@ def get_repodata(
     if response_handler is None:
         response_handler = xml_handler
     return api.Client(cfg, response_handler).get(path)
+
+
+def get_xml_content_from_fixture(fixture_path, data_type):
+    """Return the required xml content from the given ``fixture_path``.
+
+    This method should be called when an xml object of the following
+    is ``data_type`` are required.
+
+    * group
+    * filelists
+    * updateinfo
+    * group_gz
+    * modules
+    * primary
+    * other
+
+    This function should be called only when the data of type xml is
+    required. These ``data_type`` are present in repodata/repomd.xml
+    file. The function parses the ``repomd.xml`` file, gathers the
+    location of the data_type object, downloads the file and handles
+    it using the ``xml_handler`` and finally returns
+    ``xml.etree.Element`` of the root node.
+
+    :param fixture_path: Url path containing the fixtures.
+    :param data_type: The required xml file content that needs
+        to be downloaded.
+    :returns: An``xml.etree.Element`` object of the requested xml_file.
+
+    """
+    repo_path = urljoin(fixture_path, 'repodata/repomd.xml')
+    response = utils.http_get(repo_path)
+    root_elem = ElementTree.fromstring(response)
+
+    xpath = '{{{}}}data'.format(RPM_NAMESPACES['metadata/repo'])
+    data_elements = [
+        elem for elem in root_elem.findall(xpath)
+        if elem.get('type') == data_type
+    ]
+    xpath = '{{{}}}location'.format(RPM_NAMESPACES['metadata/repo'])
+    relative_path = str(data_elements[0].find(xpath).get('href'))
+    if 'xml' not in relative_path:
+        raise Exception(
+            "get_xml_content_from_fixture doesn't support non-xml data."
+        )
+    unit = requests.get(urljoin(fixture_path, relative_path))
+    return xml_handler(None, unit)
 
 
 def xml_handler(_, response):
