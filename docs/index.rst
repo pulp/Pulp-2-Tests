@@ -24,5 +24,6 @@ Pulp 2 Tests makes heavy use of `Pulp Smash`_.
 
    installation
    configuration
+   contributing
    usage
    tests
