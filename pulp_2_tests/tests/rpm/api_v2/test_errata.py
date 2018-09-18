@@ -49,7 +49,7 @@ class ApplyErratumTestCase(unittest.TestCase):
         self.assertTrue(rpm.startswith('-'.join((rpm_name, rpm_versions[0]))))
 
         # Apply erratum. Verify that the newer version of the RPM is installed.
-        pkg_mgr.upgrade(self._get_upgrade_targets(cfg))
+        pkg_mgr.apply_erratum('RHEA-2012:0055')
         rpm = cli_client.run(('rpm', '-q', rpm_name)).stdout.strip()
         self.assertTrue(rpm.startswith('-'.join((rpm_name, rpm_versions[1]))))
 
@@ -85,23 +85,6 @@ class ApplyErratumTestCase(unittest.TestCase):
             repositoryid=repo['id']
         )
         self.addCleanup(cli.Client(cfg).run, ('rm', repo_path), sudo=True)
-
-    def _get_upgrade_targets(self, cfg):
-        """Get a tuple of upgrade targets for erratum RHEA-2012:0055."""
-        erratum = 'RHEA-2012:0055'
-        # Many of Pulp Smash's classes are concerned with hiding the
-        # differences between different target platforms. That's the point of
-        # methods like PackageManager.upgrade. But sometimes, we need to peek
-        # under the hood, and this is a good example of that. Maybe
-        # _get_package_manager() could be made into a public function.
-        yum_or_dnf = cli.PackageManager._get_package_manager(cfg)  # pylint:disable=protected-access
-        self.assertIn(yum_or_dnf, ('yum', 'dnf'))
-        if yum_or_dnf == 'yum':
-            return ('--advisory', erratum)
-        lines = cli.Client(cfg).run((
-            'dnf', '--quiet', 'updateinfo', 'list', erratum
-        ), sudo=True).stdout.strip().splitlines()
-        return tuple((line.split()[2] for line in lines))
 
 
 class LargePackageListTestCase(unittest.TestCase):
