@@ -199,9 +199,9 @@ class ManageModularContentTestCase(unittest.TestCase):
             'type_ids': ['modulemd_defaults'],
         }
         repo = self.remove_module_from_repo(repo_initial, criteria)
-        self.assertEqual(
-            repo['content_unit_counts']['modulemd_defaults'],
-            0,
+        self.assertNotIn(
+            'modulemd_defaults',
+            repo['content_unit_counts'],
             repo['content_unit_counts'])
 
         self.assertEqual(
