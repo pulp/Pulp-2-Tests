@@ -179,9 +179,11 @@ class ManageModularContentTestCase(unittest.TestCase):
             repo['content_unit_counts']['modulemd'],
             repo_initial['content_unit_counts']['modulemd'] - 1,
             repo['content_unit_counts'])
+        # after removing a module 'X', the number of rpms in the repo should
+        # decrease by the number of rpms present in 'X'.
         self.assertEqual(
             repo['content_unit_counts']['rpm'],
-            repo_initial['content_unit_counts']['modulemd'] -
+            repo_initial['content_unit_counts']['rpm'] -
             MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
             repo['content_unit_counts'])
         self.assertIsNotNone(
