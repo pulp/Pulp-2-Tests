@@ -183,8 +183,7 @@ class ManageModularContentTestCase(unittest.TestCase):
         # decrease by the number of rpms present in 'X'.
         self.assertEqual(
             repo['content_unit_counts']['rpm'],
-            repo_initial['content_unit_counts']['rpm'] -
-            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo_initial['content_unit_counts']['rpm'] - 1,
             repo['content_unit_counts'])
         self.assertIsNotNone(
             repo['last_unit_removed'],
