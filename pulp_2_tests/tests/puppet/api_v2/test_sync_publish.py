@@ -127,15 +127,20 @@ class SyncValidFeedTestCase(BaseAPITestCase):
         )
         self.assertEqual(len(response['results']), 1)
 
-        # Download the Puppet module.
-        module = utils.http_get(PUPPET_MODULE_URL_2)
+        # Download the Puppet module directly from feed url.
+        latest_version = response['results'][0]['metadata']['version']
+        module_file = utils.http_get(PUPPET_MODULE_URL_2 % latest_version)
+
         client.response_handler = api.safe_handler
-        response = client.get(response['results'][0]['file_uri'])
+        # Download the Puppet module stored by Pulp.
+        file_response = client.get(response['results'][0]['file_uri'])
+
+        # Assert the files are the same.
         with self.subTest():
-            self.assertEqual(module, response.content)
+            self.assertEqual(module_file, file_response.content)
         with self.subTest():
             self.assertIn(
-                response.headers['content-type'],
+                file_response.headers['content-type'],
                 ('application/gzip', 'application/x-gzip')
             )
 
