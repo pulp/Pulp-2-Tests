@@ -205,19 +205,24 @@ response to a certain HTTP GET request. However:
 PUPPET_FEED_2 = 'https://forge.puppet.com'
 """The URL to a repository of Puppet modules."""
 
-PUPPET_MODULE_2 = {'author': 'puppetlabs', 'name': 'motd', 'version': '1.9.0'}
+PUPPET_MODULE_2 = {'author': 'puppetlabs', 'name': 'motd'}
 """Information about a Puppet module available at :data:`PUPPET_FEED_2`."""
 
-PUPPET_MODULE_URL_2 = ('{}/v3/files/{}-{}-{}.tar.gz'.format(
+PUPPET_MODULE_URL_2 = ('{}/v3/files/{}-{}-%s.tar.gz'.format(
     PUPPET_FEED_2,
     PUPPET_MODULE_2['author'],
     PUPPET_MODULE_2['name'],
-    PUPPET_MODULE_2['version'],
 ))
-"""The URL to a Puppet module available at :data:`PUPPET_FEED_2`."""
+"""The URL to a Puppet module available at :data:`PUPPET_FEED_2`.
+
+A version string should be provided to `-%s.tar.gz` e.g::
+
+    PUPPET_MODULE_URL_2 % '2.0.0'
+
+"""
 
 PUPPET_QUERY_2 = quote_plus('-'.join(
-    PUPPET_MODULE_2[key] for key in ('author', 'name', 'version')
+    PUPPET_MODULE_2[key] for key in ('author', 'name')
 ))
 """A query that can be used to search for Puppet modules.
 
