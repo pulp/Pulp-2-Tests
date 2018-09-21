@@ -1,14 +1,24 @@
 # coding=utf-8
 """Tests that perform actions over modular Errata repositories."""
-from collections import defaultdict
 import unittest
+from collections import defaultdict
+from urllib.parse import urljoin
 
 from packaging.version import Version
-from pulp_smash import api, config
+from pulp_smash import api, config, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
-from pulp_smash.pulp2.utils import sync_repo
+from pulp_smash.pulp2.utils import (
+    publish_repo,
+    search_units,
+    sync_repo,
+    upload_import_erratum,
+)
 
-from pulp_2_tests.constants import RPM_WITH_MODULES_FEED_URL
+from pulp_2_tests.constants import (
+    MODULE_ERRATA_RPM_DATA,
+    MODULE_FIXTURES_ERRATA,
+    RPM_WITH_MODULES_FEED_URL,
+)
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
@@ -139,13 +149,126 @@ class ManageModularErrataTestCase(unittest.TestCase):
             'collection names not proper'
         )
 
+    def test_copy_errata(self):
+        """Test whether Errata modules are copied.
+
+        This Test does the following:
+
+        1. It creates, syncs, and publishes a modules rpm repository.
+        2. Creates another repo with no feed.
+        3. Recursively copies an errata from one repo to another.
+        4. Checks whether the errata information in the new repo is
+           correct.
+        """
+        repo_1, _ = self._set_repo_and_get_repo_data()
+
+        # Creating an empty repo2
+        body = gen_repo(distributors=[gen_distributor(auto_publish=True)])
+        repo_2 = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo_2['_href'])
+
+        criteria = {
+            'filters': {
+                'unit': {
+                    'id': MODULE_FIXTURES_ERRATA['errata_id']
+                }},
+            'type_ids': ['erratum']
+        }
+
+        # Copy errata data recursively from repo1 to repo2
+        self.client.post(urljoin(repo_2['_href'], 'actions/associate/'), {
+            'source_repo_id': repo_1['id'],
+            'override_config': {'recursive': True},
+            'criteria': criteria
+        })
+        repo_2 = self.client.get(repo_2['_href'], params={'details': True})
+
+        self.assertEqual(
+            repo_2['total_repository_units'],
+            MODULE_FIXTURES_ERRATA['total_available_units'],
+            repo_2
+        )
+
+        self.assertEqual(
+            search_units(self.cfg, repo_1, criteria)[0]['metadata']['pkglist'],
+            search_units(self.cfg, repo_2, criteria)[0]['metadata']['pkglist'],
+            'Copied erratum doesn''t contain the same module/rpms'
+        )
+
+    def test_upload_errata(self):
+        """Upload errata and check whether it got published in the repo.
+
+        This Test does the following.
+        1. Create and sync a repo with RPM_WITH_MODULES_FEED_URL.
+        2. Upload a custom modular erratum to the repo. The custom
+           module erratum is obtained from ``_get_erratum()``.
+           Make sure that the erratum uploaded has a corresponding
+           module in the feed url.
+        3. Publish the repo after uploading the custom erratum.
+        4. Verify whether the uploaded erratum is present in the
+           published repo and also contains the modules in it.
+        """
+        # Step 1
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            distributors=[gen_distributor()]
+        )
+        repo_initial = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo_initial['_href'])
+        sync_repo(self.cfg, repo_initial)
+        # getting the update info from the published repo
+        repo_initial = self.client.get(
+            repo_initial['_href'],
+            params={'details': True}
+        )
+
+        # Step 2
+        unit = self._gen_modular_errata()
+        upload_import_erratum(self.cfg, unit, repo_initial)
+        repo = self.client.get(
+            repo_initial['_href'],
+            params={'details': True}
+        )
+
+        # Step 3
+        publish_repo(
+            self.cfg, repo,
+            {
+                'id': repo['distributors'][0]['id'],
+                'override_config': {'force_full': True},
+            })
+
+        # Step 4
+        # upload_info_file - The ``uploadinfo.xml`` of the published repo.
+        update_info_file = get_repodata(
+            self.cfg,
+            repo['distributors'][0],
+            'updateinfo'
+        )
+
+        # errata_upload - get the errata is uploaded in step 2
+        # from the updateinfo.xml.
+        errata_upload = [
+            update
+            for update in update_info_file.findall('update')
+            if update.find('id').text == unit['id']
+        ]
+
+        self.assertEqual(
+            repo_initial['content_unit_counts']['erratum'] + 1,
+            repo['content_unit_counts']['erratum'],
+            'Erratum count mismatch after uploading.'
+        )
+        self.assertGreater(len(errata_upload), 0)
+        self.assertIsNotNone(errata_upload[0].find('.//module'))
+
     def _set_repo_and_get_repo_data(self):
         """Create and Publish the required repo for this class.
 
         This method does the following:
 
         1. Create, sync and publish a repo with
-            ``RPM_WITH_MODULES_FEED_URL``
+           ``RPM_WITH_MODULES_FEED_URL``
         2. Get ``updateinfo.xml`` of the published repo.
 
         :returns: A tuple containing the repo that is created, along with
@@ -174,3 +297,40 @@ class ManageModularErrataTestCase(unittest.TestCase):
                 package.text for package in update.findall('.//filename')
             ]
         return mapper
+
+    @staticmethod
+    def _gen_modular_errata():
+        """Generate and return a modular erratum with a unique ID."""
+        return {
+            'id': utils.uuid4(),
+            'status': 'stable',
+            'updated': MODULE_ERRATA_RPM_DATA['updated'],
+            'rights': None,
+            'from': MODULE_ERRATA_RPM_DATA['from'],
+            'description': MODULE_ERRATA_RPM_DATA['description'],
+            'title': MODULE_ERRATA_RPM_DATA['rpm_name'],
+            'issued': MODULE_ERRATA_RPM_DATA['issued'],
+            'relogin_suggested': False,
+            'restart_suggested': False,
+            'solution': None,
+            'summary': None,
+            'pushcount': '1',
+            'version': '1',
+            'references': [],
+            'release': '1',
+            'reboot_suggested': None,
+            'type': 'enhancement',
+            'severity': None,
+            'pkglist': [{
+                'name': MODULE_ERRATA_RPM_DATA['collection_name'],
+                'short': '0',
+                'module': {
+                    'name': MODULE_ERRATA_RPM_DATA['rpm_name'],
+                    'stream': MODULE_ERRATA_RPM_DATA['stream_name'],
+                    'version': MODULE_ERRATA_RPM_DATA['version'],
+                    'arch': MODULE_ERRATA_RPM_DATA['arch'],
+                    'context': MODULE_ERRATA_RPM_DATA['context']
+                },
+                'packages': []
+            }]
+        }
