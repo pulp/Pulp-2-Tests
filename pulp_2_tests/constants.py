@@ -130,6 +130,27 @@ MODULE_FIXTURES_PACKAGES = {'duck': 3, 'kangaroo': 2, 'walrus': 2}
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
 """
 
+MODULE_FIXTURES_ERRATA = MappingProxyType({
+    'errata_id': 'RHEA-2012:0059',
+    'rpm_count': 2,
+    'total_available_units': 3,
+})
+"""The errata information containing the modular rpm data."""
+
+MODULE_ERRATA_RPM_DATA = MappingProxyType({
+    'arch': 'x86_64',
+    'collection_name': 'collection 0',
+    'context': 'deadbeef',
+    'description': 'Walrus Erratum; metadata-only',
+    'from': 'betelgeuze',
+    'issued': '2002-02-20 00:22:00',
+    'rpm_name': 'walrus',
+    'stream_name': '5.21',
+    'updated': '2018-09-05 11:23:42',
+    'version': '20180704144203',
+})
+"""The custom errata information for uploading an errata file."""
+
 MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType({
     'name': 'walrus',
     'stream': '0.71',
