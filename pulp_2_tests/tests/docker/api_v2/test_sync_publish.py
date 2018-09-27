@@ -358,11 +358,12 @@ class V2RegistryTestCase(SyncPublishMixin, unittest.TestCase):
         """Emulate docker pull to verify crane is working as expected.
 
         This test emulates docker pull command that hits the pulp crane
-        repositories. First the details about manifests in the repo are collected
-        by hitting the manifests url. Then the blobs shasum that are returned as
-        a part of the previous request are iterated and are hit seperately.
-        The actual docker pull, gets all these blobs and stitches them together
-        to form the docker image.This testcase is in reference to `Pulp #3638`_.
+        repositories. First the details about manifests in the repo are
+        collected by hitting the manifests url. Then the blobs checksum that are
+        returned as a part of the previous request are iterated and are hit
+        separately.  The actual docker pull, gets all these blobs and stitches
+        them together to form the docker image.This testcase is in reference to
+        `Pulp #3638`_.
 
         .. _Pulp #3638: https://pulp.plan.io/issues/3638
         """
@@ -375,7 +376,9 @@ class V2RegistryTestCase(SyncPublishMixin, unittest.TestCase):
         self.assertIn('fsLayers', response, 'The blob data doesn\'t exist')
         for blob in response['fsLayers']:
             with self.subTest(blob=blob):
-                response = client.get('/v2/{}/blobs/{}'.format(self.repo['id'], blob['blobSum']))
+                response = client.get(
+                    '/v2/{}/blobs/{}'.format(self.repo['id'], blob['blobSum'])
+                )
                 self.assertEqual(response.status_code, 200, response.content)
 
 

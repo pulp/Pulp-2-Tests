@@ -54,7 +54,7 @@ class UploadManifestListV2TestCase(SyncPublishMixin, unittest.TestCase):
              the repository hasn't been published since the new manifest list
              was uploaded.)
            * The repository's ``docker_manifest_list`` attribute has increased
-             by the approprate number.
+             by the appropriate number.
 
         This test targets the following issues:
 
