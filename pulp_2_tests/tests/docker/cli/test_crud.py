@@ -151,7 +151,7 @@ class UpdateEnableV1TestCase(unittest.TestCase):
         docker_utils.repo_delete(cls.cfg, cls.repo_id)
 
     def test_change_enable_v1_flag(self):
-        """Test that the the --enable-v1 flag was successful."""
+        """Test that the --enable-v1 flag was successful."""
         repo_details = docker_utils.repo_list(
             self.cfg,
             repo_id=self.repo_id,
@@ -205,7 +205,7 @@ class UpdateEnableV2TestCase(unittest.TestCase):
         docker_utils.repo_delete(cls.cfg, cls.repo_id)
 
     def test_change_enable_v2_flag(self):
-        """Test that the the --enable-v2 flag was successful."""
+        """Test that the --enable-v2 flag was successful."""
         repo_details = docker_utils.repo_list(
             self.cfg,
             repo_id=self.repo_id,
