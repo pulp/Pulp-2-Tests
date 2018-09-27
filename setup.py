@@ -54,7 +54,7 @@ setup(
             'pydocstyle',
             'pylint',
             # For `make docs-html` and `make docs-clean`
-            'sphinx',
+            'sphinx<1.8',
             # For `make package`
             'wheel',
             # For `make publish`

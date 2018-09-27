@@ -48,7 +48,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 exclude_patterns = ['_build']
 nitpicky = True
-autodoc_default_options = {'members': None, 'undoc-members': None}
+autodoc_default_flags = ['members']
 
 # Format-Specific Options -----------------------------------------------------
 htmlhelp_basename = 'Pulp2Testsdoc'
