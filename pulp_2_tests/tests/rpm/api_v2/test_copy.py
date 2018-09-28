@@ -6,7 +6,7 @@ import unittest
 from urllib.parse import urljoin
 
 from pulp_smash import api, cli, config, selectors, utils
-from pulp_smash.pulp2.constants import REPOSITORY_PATH
+from pulp_smash.pulp2.constants import REPOSITORY_PATH, ORPHANS_PATH
 from pulp_smash.pulp2.utils import (
     publish_repo,
     search_units,
@@ -15,11 +15,17 @@ from pulp_smash.pulp2.utils import (
 )
 
 from pulp_2_tests.constants import (
+    RPM_NAMESPACES,
     RPM_SIGNED_URL,
     RPM_UNSIGNED_FEED_URL,
     RPM_UPDATED_INFO_FEED_URL,
+    RPM_YUM_METADATA_FILE,
 )
-from pulp_2_tests.tests.rpm.api_v2.utils import gen_distributor, gen_repo
+from pulp_2_tests.tests.rpm.api_v2.utils import (
+    gen_distributor,
+    gen_repo,
+    get_repodata_repomd_xml,
+)
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
 _PATH = '/var/lib/pulp/published/yum/https/repos/'
@@ -135,3 +141,92 @@ class MtimeTestCase(unittest.TestCase):
             cli_client.machine.session().run(cmd)[1].strip().split().sort()
         )
         self.assertEqual(mtimes_pre, mtimes_post)
+
+
+class CopyYumMetadataFileTestCase(unittest.TestCase):
+    """Test the copy of metadata units between repos."""
+
+    def test_all(self):
+        """Test whether metadata copied between repos are independent.
+
+        This test targets the following issues:
+
+        * `Pulp #1944 <https://pulp.plan.io/issues/1944>`_
+        * `Pulp-2-Tests #91
+          <https://github.com/PulpQE/Pulp-2-Tests/issues/91>`_
+
+        Do the following:
+
+        1. Create and sync a repository containing
+           ``yum_repo_metadata_file``.
+        2. Create another repo and copy yum metadata from
+           first repo to second repo.
+        3. Publish repo 2.
+        4. Remove the metadata units from the first repo. Delete
+           orphan packages.
+        5. Publish repo 2 again and check whether the metadata is
+           present in the second repo still.
+        """
+        cfg = config.get_config()
+        client = api.Client(cfg, api.json_handler)
+        body = gen_repo(
+            importer_config={'feed': RPM_YUM_METADATA_FILE},
+            distributors=[gen_distributor()]
+        )
+        repo_1 = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo_1['_href'])
+        sync_repo(cfg, repo_1)
+        repo_1 = client.get(repo_1['_href'], params={'details': True})
+
+        # Create a second repository.
+        body = gen_repo(
+            distributors=[gen_distributor()]
+        )
+        repo_2 = client.post(REPOSITORY_PATH, body)
+        repo_2 = client.get(repo_2['_href'], params={'details': True})
+        self.addCleanup(client.delete, repo_2['_href'])
+
+        # Copy data to second repository.
+        client.post(urljoin(repo_2['_href'], 'actions/associate/'), {
+            'source_repo_id': repo_1['id'],
+            'override_config': {'recursive': True},
+            'criteria': {
+                'filters': {},
+                'type_ids': ['yum_repo_metadata_file'],
+            }
+        })
+
+        # Publish repo 2
+        publish_repo(cfg, repo_2)
+        # Removing metadata from repo 1 and deleting orphans.
+        client.post(
+            urljoin(repo_1['_href'], 'actions/unassociate/'),
+            {'criteria': {'filters': {}}}
+        )
+        repo_1 = client.get(repo_1['_href'], params={'details': True})
+        client.delete(ORPHANS_PATH)
+        # Publish repo 2 again
+        publish_repo(cfg, repo_2)
+        repo_2 = client.get(repo_2['_href'], params={'details': True})
+
+        # retrieve repodata of the published repo
+        xml_element = get_repodata_repomd_xml(cfg, repo_2['distributors'][0])
+        xpath = (
+            '{{{namespace}}}data'.format(
+                namespace=RPM_NAMESPACES['metadata/repo']
+            )
+        )
+        yum_meta_data_element = [
+            element
+            for element in xml_element.findall(xpath)
+            if element.attrib['type'] == 'productid'
+        ]
+        self.assertNotIn(
+            'yum_repo_metadata_file',
+            repo_1['content_unit_counts']
+        )
+        self.assertEqual(
+            repo_2['content_unit_counts']['yum_repo_metadata_file'],
+            1
+        )
+        self.assertGreater(len(yum_meta_data_element), 0)
