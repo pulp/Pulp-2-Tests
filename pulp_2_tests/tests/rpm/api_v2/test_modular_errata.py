@@ -41,8 +41,8 @@ class ManageModularErrataTestCase(unittest.TestCase):
     def setUpClass(cls):
         """Create class wide variables."""
         cls.cfg = config.get_config()
-        if cls.cfg.pulp_version < Version('2.17'):
-            raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
+        if cls.cfg.pulp_version < Version('2.18'):
+            raise unittest.SkipTest('This test requires Pulp 2.18 or newer.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_sync_publish_update_info(self):
