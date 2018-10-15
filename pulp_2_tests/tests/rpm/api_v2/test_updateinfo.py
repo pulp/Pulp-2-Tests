@@ -44,6 +44,7 @@ from xml.etree import ElementTree
 
 from packaging.version import Version
 from pulp_smash import api, config, selectors, utils
+from pulp_smash.exceptions import TaskReportError
 from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     BaseAPITestCase,
@@ -56,6 +57,7 @@ from pulp_smash.pulp2.utils import (
 from requests.exceptions import HTTPError
 
 from pulp_2_tests.constants import (
+    ERRATA_UPDATE_INFO,
     OPENSUSE_FEED_URL,
     RPM,
     RPM_DATA,
@@ -148,6 +150,81 @@ def _get_updates_by_id(update_info_tree):
         update.findall('id')[0].text: update
         for update in update_info_tree.findall('update')
     }
+
+
+class DateUpdateErrataTestCase(unittest.TestCase):
+    """Verify whether only proper newer erratas with same ID gets updated.
+
+    This test targets the following issues:
+
+    * `Pulp #858 <https://pulp.plan.io/issues/858>`_
+    * `Pulp-2-Tests #92 <https://github.com/PulpQE/pulp-smash/issues/92>`_
+
+    This test covers the three scenarios:
+
+    1. The errata is updated if ``updated`` date field indicates
+       that the uploaded errata is newer.
+    2. The errata is not updated if ``updated`` date field indicates
+       that the uploaded errata is older.
+    3. The errata is not updated if ``updated`` date field of either
+       the existing errata or the newly uploaded errata.
+       is in the wrong format (task will fail in this case).
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Create class-wide variables."""
+        cls.cfg = config.get_config()
+        cls.client = api.Client(cls.cfg, api.json_handler)
+        body = gen_repo()
+        body['distributors'] = [gen_distributor()]
+        cls.repo = cls.client.post(REPOSITORY_PATH, body)
+        cls.repo = cls.client.get(cls.repo['_href'], params={'details': True})
+        unit = utils.http_get(RPM_UNSIGNED_URL)
+        upload_import_unit(cls.cfg, unit, {'unit_type_id': 'rpm'}, cls.repo)
+        cls.errata = _gen_errata()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean resources."""
+        cls.client.delete(cls.repo['_href'])
+
+    def do_test(self, date):
+        """Upload errata, and parse `updateinfo.xml`."""
+        self.errata['updated'] = date
+        upload_import_erratum(self.cfg, self.errata, self.repo)
+        publish_repo(self.cfg, self.repo)
+        update_elements = get_repodata(
+            self.cfg, self.repo['distributors'][0], 'updateinfo'
+        )
+        return [
+            item.find('updated').get('date')
+            for item in update_elements.findall('update')
+        ]
+
+    def test_01_valid_date(self):
+        """Update errata using a valid date. See :meth:`do_test`."""
+        updates = self.do_test(ERRATA_UPDATE_INFO['updated_date'])
+        self.assertEqual(len(updates), 1, updates)
+        self.assertEqual(updates[0], ERRATA_UPDATE_INFO['updated_date'])
+
+    def test_02_older_date(self):
+        """Update errata using a valid older date. See :meth:`do_test`."""
+        updates = self.do_test(ERRATA_UPDATE_INFO['old_updated_date'])
+        self.assertEqual(len(updates), 1, updates)
+        self.assertEqual(updates[0], ERRATA_UPDATE_INFO['updated_date'])
+
+    def test_03_newer_date(self):
+        """Create errata using a newer valid date. See :meth:`do_test`."""
+        updates = self.do_test(ERRATA_UPDATE_INFO['new_updated_date'])
+        self.assertEqual(len(updates), 1, updates)
+        self.assertEqual(updates[0], ERRATA_UPDATE_INFO['new_updated_date'])
+
+    def test_04_invalid_date(self):
+        """Attempt to upload an errata with an invalid date."""
+        self.errata['updated'] = ERRATA_UPDATE_INFO['invalid_updated_date']
+        with self.assertRaises(TaskReportError):
+            upload_import_erratum(self.cfg, self.errata, self.repo)
 
 
 class UpdateInfoTestCase(BaseAPITestCase):
