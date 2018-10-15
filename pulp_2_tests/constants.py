@@ -94,6 +94,14 @@ DRPM_UNSIGNED_URL = urljoin(DRPM_UNSIGNED_FEED_URL, DRPM)
 Built from :data:`DRPM_UNSIGNED_FEED_URL` and :data:`DRPM`.
 """
 
+ERRATA_UPDATE_INFO = MappingProxyType({
+    'updated_date': '2014-07-28 00:00:00 UTC',
+    'old_updated_date': '2013-07-28 00:00:00 UTC',
+    'new_updated_date': '2015-07-28 00:00:00 UTC',
+    'invalid_updated_date': '07-28-2014 00:00:00 UTC',
+})
+"""Dates used to verify that errata metadata is not update in certain cases."""
+
 FILE_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'file/')
 """The URL to a file repository."""
 
