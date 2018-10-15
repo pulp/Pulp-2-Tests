@@ -155,7 +155,9 @@ def _get_updates_by_id(update_info_tree):
 class DateUpdateErrataTestCase(unittest.TestCase):
     """Verify whether only proper newer erratas with same ID gets updated.
 
-    This test targets the following issues:
+
+    This test targets the following issue:
+
 
     * `Pulp #858 <https://pulp.plan.io/issues/858>`_
     * `Pulp-2-Tests #92 <https://github.com/PulpQE/pulp-smash/issues/92>`_
@@ -167,7 +169,7 @@ class DateUpdateErrataTestCase(unittest.TestCase):
     2. The errata is not updated if ``updated`` date field indicates
        that the uploaded errata is older.
     3. The errata is not updated if ``updated`` date field of either
-       the existing errata or the newly uploaded errata.
+       the existing erratum or the newly uploaded erratum
        is in the wrong format (task will fail in this case).
     """
 
@@ -203,25 +205,26 @@ class DateUpdateErrataTestCase(unittest.TestCase):
         ]
 
     def test_01_valid_date(self):
-        """Update errata using a valid date. See :meth:`do_test`."""
+        """Update errata using a valid date. See:meth:`do_test`."""
+
         updates = self.do_test(ERRATA_UPDATE_INFO['updated_date'])
         self.assertEqual(len(updates), 1, updates)
         self.assertEqual(updates[0], ERRATA_UPDATE_INFO['updated_date'])
 
     def test_02_older_date(self):
-        """Update errata using a valid older date. See :meth:`do_test`."""
+        """Update errata using a valid older date. See:meth:`do_test`."""
         updates = self.do_test(ERRATA_UPDATE_INFO['old_updated_date'])
         self.assertEqual(len(updates), 1, updates)
         self.assertEqual(updates[0], ERRATA_UPDATE_INFO['updated_date'])
 
     def test_03_newer_date(self):
-        """Create errata using a newer valid date. See :meth:`do_test`."""
+        """Create errata using a newer valid date. See:meth:`do_test`."""
         updates = self.do_test(ERRATA_UPDATE_INFO['new_updated_date'])
         self.assertEqual(len(updates), 1, updates)
         self.assertEqual(updates[0], ERRATA_UPDATE_INFO['new_updated_date'])
 
     def test_04_invalid_date(self):
-        """Attempt to upload an errata with an invalid date."""
+        """Attemp to upload an errata with an invalid date."""
         self.errata['updated'] = ERRATA_UPDATE_INFO['invalid_updated_date']
         with self.assertRaises(TaskReportError):
             upload_import_erratum(self.cfg, self.errata, self.repo)

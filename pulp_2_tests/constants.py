@@ -100,7 +100,7 @@ ERRATA_UPDATE_INFO = MappingProxyType({
     'new_updated_date': '2015-07-28 00:00:00 UTC',
     'invalid_updated_date': '07-28-2014 00:00:00 UTC',
 })
-"""Dates used to verify that errata metadata is not update in certain cases."""
+"""Dates to be used to verify that update errata updates properly."""
 
 FILE_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'file/')
 """The URL to a file repository."""
