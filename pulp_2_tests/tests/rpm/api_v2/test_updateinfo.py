@@ -155,7 +155,6 @@ def _get_updates_by_id(update_info_tree):
 class DateUpdateErrataTestCase(unittest.TestCase):
     """Verify whether only proper newer erratas with same ID gets updated.
 
-
     This test targets the following issue:
 
 
@@ -169,7 +168,7 @@ class DateUpdateErrataTestCase(unittest.TestCase):
     2. The errata is not updated if ``updated`` date field indicates
        that the uploaded errata is older.
     3. The errata is not updated if ``updated`` date field of either
-       the existing erratum or the newly uploaded erratum
+       the existing errata or the newly uploaded errata
        is in the wrong format (task will fail in this case).
     """
 
@@ -178,12 +177,13 @@ class DateUpdateErrataTestCase(unittest.TestCase):
         """Create class-wide variables."""
         cls.cfg = config.get_config()
         cls.client = api.Client(cls.cfg, api.json_handler)
-        body = gen_repo()
-        body['distributors'] = [gen_distributor()]
+        body = gen_repo(
+            importer_config={'feed': RPM_UNSIGNED_FEED_URL},
+            distributors=[gen_distributor()]
+        )
         cls.repo = cls.client.post(REPOSITORY_PATH, body)
         cls.repo = cls.client.get(cls.repo['_href'], params={'details': True})
-        unit = utils.http_get(RPM_UNSIGNED_URL)
-        upload_import_unit(cls.cfg, unit, {'unit_type_id': 'rpm'}, cls.repo)
+        sync_repo(cls.cfg, cls.repo)
         cls.errata = _gen_errata()
 
     @classmethod
@@ -192,7 +192,14 @@ class DateUpdateErrataTestCase(unittest.TestCase):
         cls.client.delete(cls.repo['_href'])
 
     def do_test(self, date):
-        """Upload errata, and parse `updateinfo.xml`."""
+        """Upload errata, and parse `updateinfo.xml`.
+
+        This does the following:
+
+        1. Change the date of the errata and upload it to the repo.
+        2. Publish the repo after uploading errata.
+        3. Parse the ``updateinfo.xml`` and return the uploaded errata.
+        """
         self.errata['updated'] = date
         upload_import_erratum(self.cfg, self.errata, self.repo)
         publish_repo(self.cfg, self.repo)
@@ -202,11 +209,11 @@ class DateUpdateErrataTestCase(unittest.TestCase):
         return [
             item.find('updated').get('date')
             for item in update_elements.findall('update')
+            if item.find('id').text == self.errata['id']
         ]
 
     def test_01_valid_date(self):
         """Update errata using a valid date. See:meth:`do_test`."""
-
         updates = self.do_test(ERRATA_UPDATE_INFO['updated_date'])
         self.assertEqual(len(updates), 1, updates)
         self.assertEqual(updates[0], ERRATA_UPDATE_INFO['updated_date'])
@@ -224,7 +231,7 @@ class DateUpdateErrataTestCase(unittest.TestCase):
         self.assertEqual(updates[0], ERRATA_UPDATE_INFO['new_updated_date'])
 
     def test_04_invalid_date(self):
-        """Attemp to upload an errata with an invalid date."""
+        """Attempt to upload an errata with an invalid date."""
         self.errata['updated'] = ERRATA_UPDATE_INFO['invalid_updated_date']
         with self.assertRaises(TaskReportError):
             upload_import_erratum(self.cfg, self.errata, self.repo)
