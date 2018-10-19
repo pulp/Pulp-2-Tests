@@ -643,3 +643,13 @@ SRPM_UNSIGNED_URL = urljoin(SRPM_UNSIGNED_FEED_URL, SRPM)
 
 Built from :data:`SRPM_UNSIGNED_FEED_URL` and :data:`SRPM`.
 """
+
+PULP_LARGE_RPM_REPO = 'https://repos.fedorapeople.org/pulp/pulp/rpm_large_metadata/'
+"""A URL which serves the large rpm files for Pulp."""
+
+RPM_LARGE_METADATA = 'nodejs-babel-preset-es2015-6.6.0-2.el6.noarch.rpm'
+"""RPM with filelists size more than 9MB and less than 15 MB."""
+
+RPM_LARGE_METADATA_FEED = urljoin(PULP_LARGE_RPM_REPO,
+                                  RPM_LARGE_METADATA)
+"""Feed URL for ``RPM_LARGE_METADATA``."""

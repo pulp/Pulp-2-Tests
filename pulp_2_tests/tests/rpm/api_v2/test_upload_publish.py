@@ -28,6 +28,8 @@ from pulp_2_tests.constants import (
     RPM,
     RPM_DATA,
     RPM_INVALID_URL,
+    RPM_LARGE_METADATA,
+    RPM_LARGE_METADATA_FEED,
     RPM_UNSIGNED_URL,
     RPM_WITH_VENDOR_DATA,
     RPM_WITH_VENDOR_FEED_URL,
@@ -38,6 +40,7 @@ from pulp_2_tests.constants import (
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
+    get_rpm_published_path,
     get_unit,
 )
 from pulp_2_tests.tests.rpm.utils import check_issue_2620, check_issue_3104
@@ -520,3 +523,40 @@ class UploadInvalidRPMTestCase(unittest.TestCase):
         # Verify that the repository contains no RPMs
         rpm = search_units(cfg, repo, {'type_ids': ('rpm',)})
         self.assertEqual(len(rpm), 0)
+
+
+class UploadLargeMetadataRPM(unittest.TestCase):
+    """Test that upload of RPM with larger filelists dosen't throw error."""
+
+    def test_all(self):
+        """Verify ``pulp_2_tests.constants.RPM_LARGE_METADATA`` rpm file can be uploaded.
+
+        Specifically, this method does the following:
+
+        1. Create an RPM repo.
+        2. Verify whether the file
+           ``pulp_2_tests.constants.RPM_LARGE_METADATA`` can be uploaded
+           into the repo without errors.
+
+        This test targets:
+
+        * `Pulp #723 <https://pulp.plan.io/issues/723>`_
+        * `Pulp-2-Tests #88 <https://github.com/PulpQE/Pulp-2-Tests/issues/88>`_
+        """
+        cfg = config.get_config()
+        client = api.Client(cfg, api.json_handler)
+        body = gen_repo(
+            distributors=[gen_distributor()]
+        )
+        repo = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo['_href'])
+        rpm = utils.http_get(RPM_LARGE_METADATA_FEED)
+        upload_import_unit(cfg, rpm, {
+            'unit_type_id': 'rpm',
+        }, repo)
+        repo = client.get(repo['_href'], params={'details': True})
+        publish_repo(cfg, repo)
+        rpm_path = get_rpm_published_path(cfg, repo, RPM_LARGE_METADATA)
+
+        # Check whether the rpm is uploaded published.
+        self.assertIn(RPM_LARGE_METADATA, rpm_path, rpm_path)

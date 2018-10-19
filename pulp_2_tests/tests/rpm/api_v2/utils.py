@@ -495,3 +495,14 @@ def get_rpm_names_versions(cfg, repo):
     for versions in names_versions.values():
         versions.sort(key=Version)
     return names_versions
+
+
+def get_rpm_published_path(cfg, repo, rpm_name):
+    """Return the absolute path to ``pulp_2_tests.constants.RPM``."""
+    _path = '/var/lib/pulp/published/yum/https/repos/{}'.format(
+        repo['distributors'][0]['config']['relative_url']
+    )
+    return cli.Client(cfg).run(
+        'find {} -name'.format(_path)
+        .split() + [rpm_name]
+    ).stdout.strip()
