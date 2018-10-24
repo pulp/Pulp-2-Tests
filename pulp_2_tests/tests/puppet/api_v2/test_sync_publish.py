@@ -5,7 +5,6 @@
    http://docs.pulpproject.org/en/latest/dev-guide/integration/rest-api/repo/cud.html
 """
 import unittest
-
 from itertools import product
 from urllib.parse import urljoin
 
@@ -28,6 +27,7 @@ from pulp_2_tests.constants import (
     PUPPET_FEED_2,
     PUPPET_MODULE_1,
     PUPPET_MODULE_2,
+    PUPPET_MODULE_EXTRANEOUS_FILE,
     PUPPET_MODULE_URL_1,
     PUPPET_MODULE_URL_2,
     PUPPET_QUERY_2,
@@ -542,3 +542,54 @@ class PublishTestCase(unittest.TestCase):
         for i, module in enumerate(self.modules[1:]):
             with self.subTest(i=i):
                 self.assertEqual(self.modules[0], module)
+
+
+class UploadPuppetModuleTestCase(unittest.TestCase):
+    """Test upload puppet modules are working as expected."""
+
+    def test_upload_modules_with_extra_files(self):
+        """Test upload puppet modules with extraneous files are successfull.
+
+         Specifically, this method does the following:
+
+         1. Create a puppet repo.
+         2. Upload ``PUPPET_MODULE_EXTRANEOUS_FILE``
+            which has extraneous files to the repo.
+         3. Verify the repo upload is successful.
+
+        This test case targets:
+
+        * `Pulp-2-tests #83 <https://github.com/PulpQE/Pulp-2-Tests/issues/83>`_
+        * `Pulp #2769 <https://pulp.plan.io/issues/2769>`_
+        """
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.18'):
+            raise unittest.SkipTest('This test requires Pulp 2.18 or newer')
+        client = api.Client(cfg, api.json_handler)
+
+        # Create a puppet repo
+        repo = client.post(REPOSITORY_PATH, gen_repo())
+        self.addCleanup(client.delete, repo['_href'])
+
+        # upload puppet module with extraneous file to the repo.
+        module = utils.http_get(PUPPET_MODULE_EXTRANEOUS_FILE)
+        upload_response = client.post(CONTENT_UPLOAD_PATH)
+        self.addCleanup(client.delete, upload_response['_href'])
+
+        client.put(
+            urljoin(upload_response['_href'], '0/'),
+            data=module,
+        )
+
+        # Import the uploaded object in the repo
+        client.post(
+            urljoin(repo['_href'], 'actions/import_upload/'),
+            {
+                'unit_key': {},
+                'unit_type_id': 'puppet_module',
+                'upload_id': upload_response['upload_id'],
+            },
+        )
+
+        repo = client.get(repo['_href'], params={'details': True})
+        self.assertEqual(repo['content_unit_counts']['puppet_module'], 1)
