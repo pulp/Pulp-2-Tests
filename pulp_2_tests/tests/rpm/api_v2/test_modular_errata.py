@@ -198,12 +198,12 @@ class ManageModularErrataTestCase(unittest.TestCase):
     def test_upload_errata(self):
         """Upload errata and check whether it got published in the repo.
 
-        This Test does the following.
-        1. Create and sync a repo with RPM_WITH_MODULES_FEED_URL.
+        This test does the following:
+
+        1. Create and sync a repo with ``RPM_WITH_MODULES_FEED_URL``.
         2. Upload a custom modular erratum to the repo. The custom
-           module erratum is obtained from ``_get_erratum()``.
-           Make sure that the erratum uploaded has a corresponding
-           module in the feed url.
+           module erratum is obtained from ``_get_erratum()``. Make sure that
+           the erratum uploaded has a corresponding module in the feed url.
         3. Publish the repo after uploading the custom erratum.
         4. Verify whether the uploaded erratum is present in the
            published repo and also contains the modules in it.
