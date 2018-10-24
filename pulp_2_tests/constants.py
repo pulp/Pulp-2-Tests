@@ -279,6 +279,27 @@ A version string should be provided to `-%s.tar.gz` e.g::
     PUPPET_MODULE_URL_2 % '2.0.0'
 
 """
+PUPPET_MODULE_EXTRANEOUS_FILE_URL = (
+    'https://repos.fedorapeople.org/pulp/pulp/'
+    'demo_repos/test_puppet_extraneous_file/'
+)
+"""The URL for puppet module containing extraneous files."""
+
+PUPPET_MODULE_EXTRANEOUS_FILE_DATA = {
+    'author': 'marcel',
+    'name': 'passenger',
+    'version': '0.5.0'
+}
+"""Information about a Puppet module available at :data:`PUPPET_FEED_2`."""
+
+PUPPET_MODULE_EXTRANEOUS_FILE = urljoin(
+    PUPPET_MODULE_EXTRANEOUS_FILE_URL, '{}-{}-{}.tar.gz'.format(
+        PUPPET_MODULE_EXTRANEOUS_FILE_DATA['author'],
+        PUPPET_MODULE_EXTRANEOUS_FILE_DATA['name'],
+        PUPPET_MODULE_EXTRANEOUS_FILE_DATA['version']
+    )
+)
+""" A Puppet module containing extraneous files."""
 
 PUPPET_QUERY_2 = quote_plus('-'.join(
     PUPPET_MODULE_2[key] for key in ('author', 'name')
