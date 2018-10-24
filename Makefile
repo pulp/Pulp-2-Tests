@@ -45,8 +45,9 @@ install-dev:
 lint: lint-flake8 lint-pylint
 
 # E501 and F401 are ignored because Pylint performs similar checks.
+# W504 ignore line break after binary operator.
 lint-flake8:
-	flake8 . --ignore E501,F401 --exclude docs/_build,build
+	flake8 . --ignore E501,F401,W504 --exclude docs/_build,build
 
 # Pulp 2 Test depends on Pulp Smash, and Pulp Smash should be considered a third
 # party library. It appears that when this dependency is satisfied by a local
