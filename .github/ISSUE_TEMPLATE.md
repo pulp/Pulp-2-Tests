@@ -1,4 +1,10 @@
-# Creating Pulp 2 issues
+# Creating Pulp 2 test cases
+
+Pulp 2 test cases should be file on [pulp.plan.io](https://pulp.plan.io)
+
+For more details, see: [Creating an issue](https://pulp-smash.readthedocs.io/en/latest/about.html#creating-issues)
+
+Details to be provided when creating an issue.
 
 1. Describe what you expected to happen.
 
