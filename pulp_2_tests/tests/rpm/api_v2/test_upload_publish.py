@@ -516,7 +516,7 @@ class UploadInvalidRPMTestCase(unittest.TestCase):
             upload_import_unit(cfg, rpm, {'unit_type_id': 'rpm'}, repo)
         task = context.exception.task
 
-        # Assert that rturned error contains a descriptive message
+        # Assert that returned error contains a descriptive message
         self.assertIsNotNone(task['error']['description'])
         self.assertIn('upload', task['error']['description'].lower())
 
@@ -526,16 +526,15 @@ class UploadInvalidRPMTestCase(unittest.TestCase):
 
 
 class UploadLargeMetadataRPM(unittest.TestCase):
-    """Test that upload of RPM with larger filelists dosen't throw error."""
+    """Test that upload of RPM with large filelists does not throw an error."""
 
     def test_all(self):
-        """Verify ``pulp_2_tests.constants.RPM_LARGE_METADATA`` rpm file can be uploaded.
+        """Verify ``RPM_LARGE_METADATA`` RPM file can be uploaded.
 
         Specifically, this method does the following:
 
         1. Create an RPM repo.
-        2. Verify whether the file
-           ``pulp_2_tests.constants.RPM_LARGE_METADATA`` can be uploaded
+        2. Verify whether the file ``RPM_LARGE_METADATA`` can be uploaded
            into the repo without errors.
 
         This test targets:
@@ -545,18 +544,14 @@ class UploadLargeMetadataRPM(unittest.TestCase):
         """
         cfg = config.get_config()
         client = api.Client(cfg, api.json_handler)
-        body = gen_repo(
-            distributors=[gen_distributor()]
-        )
+        body = gen_repo(distributors=[gen_distributor()])
         repo = client.post(REPOSITORY_PATH, body)
         self.addCleanup(client.delete, repo['_href'])
         rpm = utils.http_get(RPM_LARGE_METADATA_FEED)
-        upload_import_unit(cfg, rpm, {
-            'unit_type_id': 'rpm',
-        }, repo)
+        upload_import_unit(cfg, rpm, {'unit_type_id': 'rpm'}, repo)
         repo = client.get(repo['_href'], params={'details': True})
         publish_repo(cfg, repo)
         rpm_path = get_rpm_published_path(cfg, repo, RPM_LARGE_METADATA)
 
-        # Check whether the rpm is uploaded published.
+        # Check whether the RPM is uploaded published.
         self.assertIn(RPM_LARGE_METADATA, rpm_path, rpm_path)

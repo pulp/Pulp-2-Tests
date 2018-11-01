@@ -4,7 +4,7 @@ import gzip
 import io
 import time
 import unittest
-from os.path import basename
+from os.path import basename, join
 from urllib.parse import urljoin
 from xml.etree import ElementTree
 
@@ -499,10 +499,11 @@ def get_rpm_names_versions(cfg, repo):
 
 def get_rpm_published_path(cfg, repo, rpm_name):
     """Return the absolute path to ``pulp_2_tests.constants.RPM``."""
-    _path = '/var/lib/pulp/published/yum/https/repos/{}'.format(
+    _path = join(
+        '/var/lib/pulp/published/yum/https/repos/',
         repo['distributors'][0]['config']['relative_url']
     )
     return cli.Client(cfg).run(
         'find {} -name'.format(_path)
-        .split() + [rpm_name]
+        .split() + [rpm_name], sudo=True
     ).stdout.strip()
