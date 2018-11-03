@@ -4,6 +4,8 @@
 .. _repositories:
    http://docs.pulpproject.org/en/latest/dev-guide/integration/rest-api/repo/cud.html
 """
+import unittest
+
 from itertools import product
 from urllib.parse import urljoin
 
@@ -12,10 +14,9 @@ from pulp_smash import api, config, exceptions, selectors, utils
 from pulp_smash.pulp2.constants import (
     CALL_REPORT_KEYS,
     CONTENT_UPLOAD_PATH,
-    REPOSITORY_PATH
+    REPOSITORY_PATH,
 )
 from pulp_smash.pulp2.utils import (
-    BaseAPITestCase,
     publish_repo,
     reset_pulp,
     search_units,
@@ -35,27 +36,34 @@ from pulp_2_tests.tests.puppet.api_v2.utils import gen_distributor, gen_repo
 from pulp_2_tests.tests.puppet.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
 
-class CreateTestCase(BaseAPITestCase):
+class CreateTestCase(unittest.TestCase):
     """Create two puppet repos, with and without feed URLs respectively."""
 
     @classmethod
     def setUpClass(cls):
         """Create two puppet repositories, with and without feed URLs."""
-        super().setUpClass()
+        cls.cfg = config.get_config()
+        cls.resources = set()
         cls.bodies = tuple((gen_repo() for _ in range(2)))
         cls.bodies[1]['importer_config'] = {
             'feed': 'http://' + utils.uuid4(),  # Pulp checks for a URI scheme
             'queries': [PUPPET_QUERY_2],
         }
 
-        client = api.Client(cls.cfg, api.json_handler)
+        cls.client = api.Client(cls.cfg, api.json_handler)
         cls.repos = []
         cls.importers_iter = []
         for body in cls.bodies:
-            repo = client.post(REPOSITORY_PATH, body)
+            repo = cls.client.post(REPOSITORY_PATH, body)
             cls.resources.add(repo['_href'])
             cls.repos.append(repo)
-            cls.importers_iter.append(client.get(repo['_href'] + 'importers/'))
+            cls.importers_iter.append(cls.client.get(repo['_href'] + 'importers/'))
+
+    @classmethod
+    def tearDownClass(cls):
+        """Delete all resources named by ``resources``."""
+        for resource in cls.resources:
+            cls.client.delete(resource)
 
     def test_id_notes(self):
         """Validate the ``id`` and ``notes`` attributes for each repo."""
@@ -88,7 +96,7 @@ class CreateTestCase(BaseAPITestCase):
                 self.assertEqual(body['importer_' + key], importers[0][key])
 
 
-class SyncValidFeedTestCase(BaseAPITestCase):
+class SyncValidFeedTestCase(unittest.TestCase):
     """Create and sync puppet repositories with valid feeds."""
 
     def test_matching_query(self):
@@ -101,11 +109,12 @@ class SyncValidFeedTestCase(BaseAPITestCase):
           yields one result.
         * The synced-in module can be downloaded.
         """
-        if not selectors.bug_is_fixed(3692, self.cfg.pulp_version):
+        cfg = config.get_config()
+        if not selectors.bug_is_fixed(3692, cfg.pulp_version):
             self.skipTest('https://pulp.plan.io/issues/3692')
 
         # Create and sync a repository.
-        client = api.Client(self.cfg, api.json_handler)
+        client = api.Client(cfg, api.json_handler)
         body = gen_repo()
         body['importer_config'] = {
             'feed': PUPPET_FEED_2,
@@ -118,7 +127,7 @@ class SyncValidFeedTestCase(BaseAPITestCase):
         self._sync_repo(repo)
 
         # Publish the repository.
-        publish_repo(self.cfg, repo)
+        publish_repo(cfg, repo)
         module = '/'.join((PUPPET_MODULE_2['author'], PUPPET_MODULE_2['name']))
         response = client.get(
             '/v3/releases',
@@ -154,7 +163,8 @@ class SyncValidFeedTestCase(BaseAPITestCase):
           yields no results.
         """
         # Create and sync a repository.
-        client = api.Client(self.cfg, api.json_handler)
+        cfg = config.get_config()
+        client = api.Client(cfg, api.json_handler)
         body = gen_repo()
         body['importer_config'] = {
             'feed': PUPPET_FEED_2,
@@ -167,7 +177,7 @@ class SyncValidFeedTestCase(BaseAPITestCase):
         self._sync_repo(repo)
 
         # Publish the repository.
-        publish_repo(self.cfg, repo)
+        publish_repo(cfg, repo)
         module = '/'.join((PUPPET_MODULE_2['author'], PUPPET_MODULE_2['name']))
         with self.assertRaises(HTTPError):
             client.get(
@@ -178,30 +188,38 @@ class SyncValidFeedTestCase(BaseAPITestCase):
 
     def _sync_repo(self, repo):
         """Sync a repository, and verify no tasks contain an error message."""
-        report = sync_repo(self.cfg, repo).json()
-        for task in api.poll_spawned_tasks(self.cfg, report):
+        cfg = config.get_config()
+        report = sync_repo(cfg, repo).json()
+        for task in api.poll_spawned_tasks(cfg, report):
             self.assertIsNone(
                 task['progress_report']['puppet_importer']['metadata']['error_message']  # pylint:disable=line-too-long
             )
 
 
-class SyncInvalidFeedTestCase(BaseAPITestCase):
-    """If an invalid feed is given a sync should complete with errors."""
+class SyncInvalidFeedTestCase(unittest.TestCase):
+    """If an invalid feed is given, a sync should complete with errors."""
 
     @classmethod
     def setUpClass(cls):
         """Create a puppet repository with an invalid feed and sync it."""
-        super().setUpClass()
-        client = api.Client(cls.cfg, api.json_handler)
+        cls.cfg = config.get_config()
+        cls.resources = set()
+        cls.client = api.Client(cls.cfg, api.json_handler)
         body = gen_repo()
         body['importer_config'] = {'feed': 'http://' + utils.uuid4()}
-        repo = client.post(REPOSITORY_PATH, body)
+        repo = cls.client.post(REPOSITORY_PATH, body)
         cls.resources.add(repo['_href'])
 
         # Trigger a repository sync and collect completed tasks.
-        client.response_handler = api.code_handler
-        cls.report = client.post(urljoin(repo['_href'], 'actions/sync/'))
+        cls.client.response_handler = api.code_handler
+        cls.report = cls.client.post(urljoin(repo['_href'], 'actions/sync/'))
         cls.tasks = list(api.poll_spawned_tasks(cls.cfg, cls.report.json()))
+
+    @classmethod
+    def tearDownClass(cls):
+        """Delete all resources named by ``resources``."""
+        for resource in cls.resources:
+            cls.client.delete(resource)
 
     def test_status_code(self):
         """Assert the call to sync a repository returns an HTTP 202."""
@@ -224,11 +242,11 @@ class SyncInvalidFeedTestCase(BaseAPITestCase):
         )
 
 
-class SyncNoFeedTestCase(BaseAPITestCase):
+class SyncNoFeedTestCase(unittest.TestCase):
     """Create and sync a puppet repository with no feed.
 
     At least one of the sync tasks should fail. The task should fail in a
-    graceful manner, without e.g. an internal tracebacks. This test targets
+    graceful manner such as without an internal tracebacks. This test targets
     `Pulp #2628 <https://pulp.plan.io/issues/2628>`_.
     """
 
@@ -260,24 +278,31 @@ class SyncNoFeedTestCase(BaseAPITestCase):
             self.assertIsNone(err.exception.task['traceback'])
 
 
-class SyncValidManifestFeedTestCase(BaseAPITestCase):
+class SyncValidManifestFeedTestCase(unittest.TestCase):
     """A valid Puppet manifest should sync correctly."""
 
     @classmethod
     def setUpClass(cls):
         """Create repository with the feed pointing to a valid manifest."""
-        super().setUpClass()
-        client = api.Client(cls.cfg)
+        cls.cfg = config.get_config()
+        cls.resources = set()
+        cls.client = api.Client(cls.cfg)
         body = gen_repo()
         body['importer_config'] = {
             'feed': 'http://repos.fedorapeople.org/repos/pulp/pulp/demo_repos/puppet_manifest/modules/'  # pylint:disable=line-too-long
         }
-        repo = client.post(REPOSITORY_PATH, body).json()
+        repo = cls.client.post(REPOSITORY_PATH, body).json()
         cls.resources.add(repo['_href'])
 
         # Trigger a repository sync and collect completed tasks.
         cls.report = sync_repo(cls.cfg, repo)
         cls.tasks = list(api.poll_spawned_tasks(cls.cfg, cls.report.json()))
+
+    @classmethod
+    def tearDownClass(cls):
+        """Delete all resources named by ``resources``."""
+        for resource in cls.resources:
+            cls.client.delete(resource)
 
     def test_status_code(self):
         """Assert the call to sync a repository returns an HTTP 202."""
@@ -296,7 +321,7 @@ class SyncValidManifestFeedTestCase(BaseAPITestCase):
                 )
 
 
-class PublishTestCase(BaseAPITestCase):
+class PublishTestCase(unittest.TestCase):
     """Test repository syncing, publishing and data integrity.
 
     Test uploading custom puppet module to repository, copying content between
@@ -311,34 +336,35 @@ class PublishTestCase(BaseAPITestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Upload puppet module to a repo, copy it to another, publish and download.
+        """Upload puppet module to a repo, copy it to another repo, publish and download.
 
-        Create two puppet repositories, both without feeds. Upload an module to
+        Create two puppet repositories, both without feeds. Upload a module to
         the first repository. Copy its content to the second repository. Add
         distributors to the repositories, publish repositories and download
         modules back from them.
         """
-        super().setUpClass()
+        cls.cfg = config.get_config()
+        cls.resources = set()
         reset_pulp(cls.cfg)  # See: https://pulp.plan.io/issues/1406
         cls.responses = {}
         cls.modules = []  # Raw puppet modules.
 
         # Download a puppet module and create two repositories.
-        client = api.Client(cls.cfg, api.json_handler)
-        repos = [client.post(REPOSITORY_PATH, gen_repo()) for _ in range(2)]
+        cls.client = api.Client(cls.cfg, api.json_handler)
+        repos = [cls.client.post(REPOSITORY_PATH, gen_repo()) for _ in range(2)]
         for repo in repos:
             cls.resources.add(repo['_href'])
-        client.response_handler = api.safe_handler
+        cls.client.response_handler = api.safe_handler
         cls.modules.append(utils.http_get(PUPPET_MODULE_URL_1))
 
         # Begin an upload request, upload a puppet module, move the puppet
         # module into a repository, and end the upload request.
-        cls.responses['malloc'] = client.post(CONTENT_UPLOAD_PATH)
-        cls.responses['upload'] = client.put(
+        cls.responses['malloc'] = cls.client.post(CONTENT_UPLOAD_PATH)
+        cls.responses['upload'] = cls.client.put(
             urljoin(cls.responses['malloc'].json()['_href'], '0/'),
             data=cls.modules[0],
         )
-        cls.responses['import'] = client.post(
+        cls.responses['import'] = cls.client.post(
             urljoin(repos[0]['_href'], 'actions/import_upload/'),
             {
                 'unit_key': {},
@@ -346,12 +372,12 @@ class PublishTestCase(BaseAPITestCase):
                 'upload_id': cls.responses['malloc'].json()['upload_id'],
             },
         )
-        cls.responses['free'] = client.delete(
+        cls.responses['free'] = cls.client.delete(
             cls.responses['malloc'].json()['_href']
         )
 
         # Copy content from the first puppet repository to the second.
-        cls.responses['copy'] = client.post(
+        cls.responses['copy'] = cls.client.post(
             urljoin(repos[1]['_href'], 'actions/associate/'),
             {'source_repo_id': repos[0]['id']}
         )
@@ -360,7 +386,7 @@ class PublishTestCase(BaseAPITestCase):
         for key in {'distribute', 'publish'}:
             cls.responses[key] = []
         for repo in repos:
-            cls.responses['distribute'].append(client.post(
+            cls.responses['distribute'].append(cls.client.post(
                 urljoin(repo['_href'], 'distributors/'),
                 {
                     'auto_publish': False,
@@ -373,7 +399,7 @@ class PublishTestCase(BaseAPITestCase):
                     },
                 }
             ))
-            cls.responses['publish'].append(client.post(
+            cls.responses['publish'].append(cls.client.post(
                 urljoin(repo['_href'], 'actions/publish/'),
                 {'id': cls.responses['distribute'][-1].json()['id']},
             ))
@@ -384,19 +410,19 @@ class PublishTestCase(BaseAPITestCase):
         for repo in repos:
             if not selectors.bug_is_fixed(1440, cls.cfg.pulp_version):
                 continue
-            cls.responses['puppet releases'].append(client.get(
+            cls.responses['puppet releases'].append(cls.client.get(
                 '/api/v1/releases.json',
                 params={'module': author_name},
                 auth=('.', repo['id']),
             ))
-            cls.responses['puppet releases'].append(client.get(
+            cls.responses['puppet releases'].append(cls.client.get(
                 '/pulp_puppet/forge/repository/{}/api/v1/releases.json'
                 .format(repo['id']),
                 params={'module': author_name},
             ))
             if cls.cfg.pulp_version < Version('2.8'):
                 continue
-            cls.responses['puppet releases'].append(client.get(
+            cls.responses['puppet releases'].append(cls.client.get(
                 '/v3/releases',
                 params={'module': author_name},
                 auth=('repository', repo['id']),
@@ -409,13 +435,19 @@ class PublishTestCase(BaseAPITestCase):
                 path = body['results'][0]['file_uri']
             else:
                 path = body[author_name][0]['file']
-            cls.modules.append(client.get(path).content)
+            cls.modules.append(cls.client.get(path).content)
 
         # Search for all units in each of the two repositories.
         cls.responses['repo units'] = [
             search_units(cls.cfg, repo, {}, api.safe_handler)
             for repo in repos
         ]
+
+    @classmethod
+    def tearDownClass(cls):
+        """Delete all resources named by ``resources``."""
+        for resource in cls.resources:
+            cls.client.delete(resource)
 
     def test_status_code(self):
         """Verify the HTTP status code of each server response."""
