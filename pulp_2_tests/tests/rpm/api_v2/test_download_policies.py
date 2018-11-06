@@ -94,6 +94,8 @@ class BackgroundTestCase(BaseAPITestCase):
         if (not selectors.bug_is_fixed(1905, cls.cfg.pulp_version) and
                 os_is_rhel6(cls.cfg)):
             raise unittest.SkipTest('https://pulp.plan.io/issues/1905')
+        if not selectors.bug_is_fixed(4120, cls.cfg.pulp_version):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/4120')
 
         # Required to ensure content is actually downloaded.
         reset_squid(cls.cfg)
@@ -269,6 +271,8 @@ class FixFileCorruptionTestCase(unittest.TestCase):
         if (not selectors.bug_is_fixed(1905, cls.cfg.pulp_version) and
                 os_is_rhel6(cls.cfg)):
             raise unittest.SkipTest('https://pulp.plan.io/issues/1905')
+        if not selectors.bug_is_fixed(4120, cls.cfg.pulp_version):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/4120')
 
         # Ensure Pulp is empty of units otherwise we might just associate pre-
         # existing units.
@@ -404,6 +408,8 @@ class SwitchPoliciesTestCase(BaseAPITestCase):
         """Make sure Pulp and Squid are reset."""
         if check_issue_3104(self.cfg):
             self.skipTest('https://pulp.plan.io/issues/3104')
+        if not selectors.bug_is_fixed(4120, self.cfg.pulp_version):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/4120')
         # Required to ensure content is actually downloaded.
         reset_squid(self.cfg)
         reset_pulp(self.cfg)
