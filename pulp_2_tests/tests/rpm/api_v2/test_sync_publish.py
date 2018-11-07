@@ -29,8 +29,11 @@ from pulp_2_tests.constants import (
     RPM_MISSING_FILELISTS_FEED_URL,
     RPM_MISSING_OTHER_FEED_URL,
     RPM_MISSING_PRIMARY_FEED_URL,
+    RPM_NAMESPACES,
+    RPM_SHA_512_FEED_URL,
     RPM_SIGNED_FEED_COUNT,
     RPM_SIGNED_FEED_URL,
+    RPM_UNSIGNED_FEED_COUNT,
     RPM_UNSIGNED_FEED_URL,
     RPM_UNSIGNED_URL,
     SRPM_SIGNED_FEED_URL,
@@ -38,6 +41,7 @@ from pulp_2_tests.constants import (
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
+    get_repodata_repomd_xml,
     get_unit,
 )
 from pulp_2_tests.tests.rpm.utils import check_issue_3104
@@ -422,3 +426,44 @@ class NonExistentRepoTestCase(unittest.TestCase):
         """Publish a non-existent repository."""
         with self.assertRaises(HTTPError):
             publish_repo(self.cfg, self.repo, {'id': utils.uuid4()})
+
+
+class SyncSha512RPMPackageTestCase(unittest.TestCase):
+    """Test whether user can sync content from RPM repo with sha512 checksum."""
+
+    def test_all(self):
+        """Test whether RPM repo with sha512 checksum is synced correctly.
+
+        Do the following:
+
+        1. Create a repo pointing to ``RPM_SHA_512_FEED_URL``.
+        2. Sync the repo and verify whether it is synced correctly.
+        3. Auto Publish the repo and check whether the ``repomd.xml`` contains
+           all checksum objects of type ``sha512``.
+
+        This test targets `Pulp Plan #4007
+        <https://pulp.plan.io/issues/4007>`_.
+        """
+        cfg = config.get_config()
+        client = api.Client(cfg, api.json_handler)
+        body = gen_repo(
+            importer_config={'feed': RPM_SHA_512_FEED_URL},
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+        repo = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo['_href'])
+        sync_repo(cfg, repo)
+        repo = client.get(repo['_href'], params={'details': True})
+        # retrieving the published repo
+        xml_element = get_repodata_repomd_xml(cfg, repo['distributors'][0])
+        xpath = (
+            '{{{namespace}}}data/{{{namespace}}}checksum'.format(
+                namespace=RPM_NAMESPACES['metadata/repo']
+            )
+        )
+        checksum_type = {
+            element.attrib['type']
+            for element in xml_element.findall(xpath)
+        }
+        self.assertEqual(checksum_type, {'sha512'}, checksum_type)
+        self.assertEqual(repo['content_unit_counts']['rpm'], RPM_UNSIGNED_FEED_COUNT)
