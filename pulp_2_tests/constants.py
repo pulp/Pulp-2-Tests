@@ -571,6 +571,9 @@ RPM_UNSIGNED_URL = urljoin(RPM_UNSIGNED_FEED_URL, RPM)
 Built from :data:`RPM_UNSIGNED_FEED_URL` and :data:`RPM`.
 """
 
+RPM_SHA_512_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-sha-512/')
+"""The URL to an RPM repository with sha512 checksum."""
+
 RPM_UPDATED_INFO_FEED_URL = urljoin(
     PULP_FIXTURES_BASE_URL,
     'rpm-updated-updateinfo/'
