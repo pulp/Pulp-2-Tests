@@ -170,6 +170,8 @@ class OnDemandTestCase(BaseAPITestCase):
         super().setUpClass()
         if check_issue_3104(cls.cfg):
             raise unittest.SkipTest('https://pulp.plan.io/issues/3104')
+        if not selectors.bug_is_fixed(4120, cls.cfg.pulp_version):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/4120')
 
         # Ensure `locally_stored_units` is 0 before we start.
         reset_squid(cls.cfg)
