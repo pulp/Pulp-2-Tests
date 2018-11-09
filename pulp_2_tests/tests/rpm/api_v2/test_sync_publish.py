@@ -208,7 +208,7 @@ class SyncInvalidMetadataTestCase(unittest.TestCase):
         )
 
 
-class ChangeFeedTestCase(BaseAPITestCase):
+class ChangeFeedTestCase(unittest.TestCase):
     """Sync a repository, change its feed, and sync it again.
 
     Specifically, the test case procedure is as follows:
@@ -222,6 +222,12 @@ class ChangeFeedTestCase(BaseAPITestCase):
     The entire procedure should succeed. This test case targets `Pulp #1922
     <https://pulp.plan.io/issues/1922>`_.
     """
+
+    @classmethod
+    def setUpClass(cls):
+        """Set config and client used by each test case."""
+        cls.cfg = config.get_config()
+        cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_all(self):
         """Sync a repository, change its feed, and sync it again."""
@@ -244,12 +250,11 @@ class ChangeFeedTestCase(BaseAPITestCase):
         repo = self.create_sync_publish_repo(body)
 
         # Update repository C.
-        client = api.Client(self.cfg, api.json_handler)
         feed = self.get_feed(repos[1])
-        client.put(repo['importers'][0]['_href'], {
+        self.client.put(repo['importers'][0]['_href'], {
             'importer_config': {'feed': feed}
         })
-        repo = client.get(repo['_href'], params={'details': True})
+        repo = self.client.get(repo['_href'], params={'details': True})
         self.assertEqual(repo['importers'][0]['config']['feed'], feed)
 
         # Sync and publish repository C.
@@ -274,10 +279,9 @@ class ChangeFeedTestCase(BaseAPITestCase):
         :param body: A dict of information to use when creating the repository.
         :return: A detailed dict of information about the repository.
         """
-        client = api.Client(self.cfg, api.json_handler)
-        repo = client.post(REPOSITORY_PATH, body)
-        self.addCleanup(client.delete, repo['_href'])
-        repo = client.get(repo['_href'], params={'details': True})
+        repo = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo['_href'])
+        repo = self.client.get(repo['_href'], params={'details': True})
         sync_repo(self.cfg, repo)
         publish_repo(self.cfg, repo)
         return repo
