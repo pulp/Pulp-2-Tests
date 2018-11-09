@@ -290,7 +290,7 @@ def _remove_unit(cfg, repo, unit):
     return api.Client(cfg).post(path, body).json()
 
 
-class SelectiveAssociateTestCase(BaseAPITestCase):
+class SelectiveAssociateTestCase(unittest.TestCase):
     """Ensure Pulp only associate needed content.
 
     Test steps:
@@ -305,27 +305,28 @@ class SelectiveAssociateTestCase(BaseAPITestCase):
 
     def test_all(self):
         """Check if Pulp only associate missing repo content."""
-        if self.cfg.pulp_version < Version('2.11'):
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.11'):
             self.skipTest(
                 'Selective association is available on Pulp 2.11+ see Pulp '
                 '#2457 for more information'
             )
-        client = api.Client(self.cfg, api.json_handler)
+        client = api.Client(cfg, api.json_handler)
         body = gen_repo()
         body['importer_config']['feed'] = RPM_UNSIGNED_FEED_URL
         repo = client.post(REPOSITORY_PATH, body)
         self.addCleanup(client.delete, repo['_href'])
-        sync_repo(self.cfg, repo)
+        sync_repo(cfg, repo)
         rpm_units = (
-            _get_units_by_type(search_units(self.cfg, repo), 'rpm')
+            _get_units_by_type(search_units(cfg, repo), 'rpm')
         )
         # Let's select up to 1/5 of the available units to remove
         to_remove = random.sample(
             rpm_units, random.randrange(int(RPM_UNSIGNED_FEED_COUNT / 4)))
         for unit in to_remove:
-            _remove_unit(self.cfg, repo, unit)
+            _remove_unit(cfg, repo, unit)
         report = client.post(urljoin(repo['_href'], 'actions/sync/'))
-        tasks = tuple(api.poll_spawned_tasks(self.cfg, report))
+        tasks = tuple(api.poll_spawned_tasks(cfg, report))
         self.assertEqual(len(tasks), 1, tasks)
         self.assertEqual(
             tasks[0]['result']['added_count'], len(to_remove), to_remove)
