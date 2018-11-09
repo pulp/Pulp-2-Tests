@@ -342,7 +342,7 @@ class AllowValidKeyTestCase(BaseAPITestCase):
                 )
 
 
-class AllowAnyKeyTestCase(BaseAPITestCase):
+class AllowAnyKeyTestCase(unittest.TestCase):
     """Use an importer that allows unsigned packages and has no key IDs.
 
     The importer should have the following pseudocode configuration:
@@ -355,12 +355,17 @@ class AllowAnyKeyTestCase(BaseAPITestCase):
     @classmethod
     def setUpClass(cls):
         """Create a repository with an importer."""
-        super().setUpClass()
+        cls.cfg = config.get_config()
         cls.repo = _create_repository(cls.cfg, {
             'allowed_keys': [],
             'require_signature': False,
         })
-        cls.resources.add(cls.repo['_href'])
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up resources."""
+        if cls.repo:
+            api.Client(cls.cfg).delete(cls.repo['_href'])
 
     def test_all_packages(self):
         """Import signed and unsigned DRPM, RPM & SRPM packages into the repo.
