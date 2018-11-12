@@ -79,7 +79,7 @@ class UploadDrpmTestCase(unittest.TestCase):
         self.assertEqual(units[0]['metadata']['filename'], DRPM)
 
 
-class UploadDrpmTestCaseWithCheckSumType(BaseAPITestCase):
+class UploadDrpmTestCaseWithCheckSumType(unittest.TestCase):
     """Test whether one can upload a DRPM into a repository.
 
     `Pulp issue #2627 <https://https://pulp.plan.io/issues/2627>`_ caused
@@ -89,8 +89,7 @@ class UploadDrpmTestCaseWithCheckSumType(BaseAPITestCase):
     <https://github.com/PulpQE/pulp-smash/issues/585>`_
     """
 
-    @classmethod
-    def setUpClass(cls):
+    def test_all(self):
         """Import a DRPM into a repository and search it for content units.
 
         Specifically, this method does the following:
@@ -100,20 +99,17 @@ class UploadDrpmTestCaseWithCheckSumType(BaseAPITestCase):
             "sha256"
         3. Search for all content units in the repository.
         """
-        super().setUpClass()
-
-    def test_all(self):
-        """Test that uploading DRPM with checksumtype specified works."""
-        if not selectors.bug_is_fixed(1806, self.cfg.pulp_version):
+        cfg = config.get_config()
+        if not selectors.bug_is_fixed(1806, cfg.pulp_version):
             raise unittest.SkipTest('https://pulp.plan.io/issues/1806')
-        if not selectors.bug_is_fixed(2627, self.cfg.pulp_version):
+        if not selectors.bug_is_fixed(2627, cfg.pulp_version):
             raise unittest.SkipTest('https://pulp.plan.io/issues/2627')
-        client = api.Client(self.cfg)
+        client = api.Client(cfg)
         repo = client.post(REPOSITORY_PATH, gen_repo()).json()
         self.addCleanup(client.delete, repo['_href'])
         drpm = utils.http_get(DRPM_UNSIGNED_URL)
         upload_import_unit(
-            self.cfg,
+            cfg,
             drpm,
             {
                 'unit_type_id': 'drpm',
@@ -121,7 +117,7 @@ class UploadDrpmTestCaseWithCheckSumType(BaseAPITestCase):
             },
             repo,
         )
-        units = search_units(self.cfg, repo, {})
+        units = search_units(cfg, repo, {})
         self.assertEqual(len(units), 1, units)
         # Test if DRPM extracted correct metadata for creating filename.
         self.assertEqual(
