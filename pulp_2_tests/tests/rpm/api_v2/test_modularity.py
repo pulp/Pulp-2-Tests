@@ -9,6 +9,7 @@ from pulp_smash import api, cli, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     publish_repo,
+    search_units,
     sync_repo,
     upload_import_unit,
 )
@@ -17,6 +18,7 @@ from pulp_2_tests.constants import (
     MODULE_FIXTURES_PACKAGES,
     MODULE_FIXTURES_PACKAGE_STREAM,
     RPM_NAMESPACES,
+    RPM_UNSIGNED_FEED_COUNT,
     RPM_UNSIGNED_FEED_URL,
     RPM_WITH_MODULES_FEED_URL,
 )
@@ -360,3 +362,59 @@ class UploadModuleTestCase(unittest.TestCase):
         relative_path = data_elements[0].find(xpath).get('href')
         unit = utils.http_get(urljoin(path, relative_path))
         return unit
+
+
+class CheckIsModularFlagTestCase(unittest.TestCase):
+    """Check is_modular flag unit is present after syncing."""
+
+    def test_all(self):
+        """Verify whether the is_modular flag is present in rpm units.
+
+        This test does the following:
+
+        1. Create and sync a modular repo
+        2. Filter the modular and non_modular units using
+           :meth:`pulp_smash.pulp2.utils.search_units`
+        3. Check whether the modular and non_modular units returned
+           by this filter is accurate.
+
+        This test case targets:
+
+        * `Pulp #4049 <https://pulp.plan.io/issues/4049>`_.
+        * `Pulp #4146 <https://pulp.plan.io/issues/4146>`_.
+        """
+        cfg = config.get_config()
+        client = api.Client(cfg, api.json_handler)
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            distributors=[gen_distributor()]
+
+        )
+        repo = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo['_href'])
+        sync_repo(cfg, repo)
+        repo = client.get(repo['_href'], params={'details': True})
+        modular_units = search_units(
+            cfg, repo, {
+                'filters': {'unit': {'is_modular': True}},
+                'type_ids': ['rpm'],
+            }
+        )
+        non_modular_units = search_units(
+            cfg, repo, {
+                'filters': {'unit': {'is_modular': False}},
+                'type_ids': ['rpm'],
+            }
+        )
+        # Check the number of modular units returned by `is_modular` as True.
+        self.assertEqual(
+            len(modular_units),
+            sum(MODULE_FIXTURES_PACKAGES.values()),
+            modular_units
+        )
+        # Check the number of modular units returned by `is_modular` as False.
+        self.assertEqual(
+            len(non_modular_units),
+            RPM_UNSIGNED_FEED_COUNT - sum(MODULE_FIXTURES_PACKAGES.values()),
+            non_modular_units
+        )
