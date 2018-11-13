@@ -167,7 +167,7 @@ class UploadedDrpmChecksumTypeTestCase(unittest.TestCase):
             )
 
 
-class UploadSrpmTestCase(BaseAPITestCase):
+class UploadSrpmTestCase(unittest.TestCase):
     """Test whether one can upload a SRPM into a repository.
 
     This test case targets `Pulp Smash #402
@@ -184,15 +184,19 @@ class UploadSrpmTestCase(BaseAPITestCase):
         2. Upload a SRPM into the repository.
         3. Search for all content units in the repository.
         """
-        super().setUpClass()
-        if check_issue_2620(cls.cfg):
+        cfg = config.get_config()
+        if check_issue_2620(cfg):
             raise unittest.SkipTest('https://pulp.plan.io/issues/2620')
-        client = api.Client(cls.cfg)
-        repo = client.post(REPOSITORY_PATH, gen_repo()).json()
-        cls.resources.add(repo['_href'])
+        cls.client = api.Client(cfg, api.json_handler)
+        cls.repo = cls.client.post(REPOSITORY_PATH, gen_repo())
         srpm = utils.http_get(SRPM_UNSIGNED_URL)
-        upload_import_unit(cls.cfg, srpm, {'unit_type_id': 'srpm'}, repo)
-        cls.units = search_units(cls.cfg, repo, {}, api.safe_handler)
+        upload_import_unit(cfg, srpm, {'unit_type_id': 'srpm'}, cls.repo)
+        cls.units = search_units(cfg, cls.repo, {}, api.safe_handler)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean resources."""
+        cls.client.delete(cls.repo['_href'])
 
     def test_status_code_units(self):
         """Verify the HTTP status code for repo units response."""
