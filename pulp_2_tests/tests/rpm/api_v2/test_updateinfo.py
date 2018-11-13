@@ -430,26 +430,26 @@ class UpdateInfoTestCase(BaseAPITestCase):
         self.assertEqual(erratum['version'], update_element.get('version'))
 
 
-class UpdateRepoTestCase(BaseAPITestCase):
+class UpdateRepoTestCase(unittest.TestCase):
     """Verify ``updateinfo.xml`` changes as its repo changes."""
 
     @classmethod
     def setUpClass(cls):
         """Create an RPM repository with a feed and distributor."""
-        super().setUpClass()
+        cls.cfg = config.get_config()
         if check_issue_3104(cls.cfg):
             raise unittest.SkipTest('https://pulp.plan.io/issues/3104')
-        client = api.Client(cls.cfg, api.json_handler)
+        cls.client = api.Client(cls.cfg, api.json_handler)
         body = gen_repo()
         body['importer_config']['feed'] = RPM_SIGNED_FEED_URL
         body['distributors'] = [gen_distributor()]
-        try:
-            repo = client.post(REPOSITORY_PATH, body)
-            cls.resources.add(repo['_href'])
-            cls.repo = client.get(repo['_href'], params={'details': True})
-        except:  # noqa:E722
-            cls.tearDownClass()
-            raise
+        cls.repo = cls.client.post(REPOSITORY_PATH, body)
+        cls.repo = cls.client.get(cls.repo['_href'], params={'details': True})
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean resources."""
+        cls.client.delete(cls.repo['_href'])
 
     def test_01_sync_publish(self):
         """Sync and publish the repository.
@@ -484,8 +484,7 @@ class UpdateRepoTestCase(BaseAPITestCase):
         Fetch ``updateinfo.xml``. Verify that an ``<update>`` with an ``<id>``
         of ``pulp_2_tests.constants.RPM_ERRATUM_ID`` is not present.
         """
-        client = api.Client(self.cfg, api.json_handler)
-        client.post(urljoin(self.repo['_href'], 'actions/unassociate/'), {
+        self.client.post(urljoin(self.repo['_href'], 'actions/unassociate/'), {
             'criteria': {'filters': {'unit': {'name': RPM_ERRATUM_RPM_NAME}}}
         })
         publish_repo(self.cfg, self.repo)
