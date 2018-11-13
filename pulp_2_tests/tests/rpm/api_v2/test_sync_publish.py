@@ -17,7 +17,7 @@ from urllib.parse import urljoin
 from packaging.version import Version
 from pulp_smash import api, config, exceptions, selectors, utils
 from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import BaseAPITestCase, publish_repo, sync_repo
+from pulp_smash.pulp2.utils import publish_repo, sync_repo
 from requests.exceptions import HTTPError
 
 from pulp_2_tests.constants import (
@@ -49,7 +49,7 @@ from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:
 
 
 # This class is left public for documentation purposes.
-class SyncRepoBaseTestCase(BaseAPITestCase):
+class SyncRepoBaseTestCase(unittest.TestCase):
     """A parent class for repository syncronization test cases.
 
     :meth:`get_feed_url` should be overridden by concrete child classes. This
@@ -61,13 +61,17 @@ class SyncRepoBaseTestCase(BaseAPITestCase):
         """Create an RPM repository with a valid feed and sync it."""
         if inspect.getmro(cls)[0] == SyncRepoBaseTestCase:
             raise unittest.SkipTest('Abstract base class.')
-        super().setUpClass()
-        client = api.Client(cls.cfg, api.json_handler)
+        cls.cfg = config.get_config()
+        cls.client = api.Client(cls.cfg, api.json_handler)
         body = gen_repo()
         body['importer_config']['feed'] = cls.get_feed_url()
-        cls.repo = client.post(REPOSITORY_PATH, body)
-        cls.resources.add(cls.repo['_href'])
+        cls.repo = cls.client.post(REPOSITORY_PATH, body)
         cls.report = sync_repo(cls.cfg, cls.repo)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean resources."""
+        cls.client.delete(cls.repo['_href'])
 
     @staticmethod
     def get_feed_url():
