@@ -70,6 +70,10 @@ CONTENT_APPLICABILITY_REPORT_SCHEMA = {
                         'type': 'array',
                         'items': {'type': 'string'}
                     },
+                    'modulemd': {
+                        'type': 'array',
+                        'items': {'type': 'string'}
+                    },
                     'rpm': {
                         'type': 'array',
                         'items': {'type': 'string'}
@@ -83,7 +87,12 @@ CONTENT_APPLICABILITY_REPORT_SCHEMA = {
         }
     }
 }
-"""A schema for a content applicability report for a consumer."""
+"""A schema for a content applicability report for a consumer.
+
+Schema now includes modulemd profiles:
+
+* `Pulp #3925 <https://pulp.plan.io/issues/3925>`_
+"""
 
 
 class BasicTestCase(unittest.TestCase):
@@ -181,6 +190,12 @@ class BasicTestCase(unittest.TestCase):
                 len(applicability[0]['applicability']['erratum']),
                 1,
                 applicability[0]['applicability']['erratum'],
+            )
+        with self.subTest(comment='verify modulemd listed in report'):
+            self.assertEqual(
+                len(applicability[0]['applicability']['modulemd']),
+                0,
+                applicability[0]['applicability']['modulemd'],
             )
         with self.subTest(comment='verify RPMs listed in report'):
             self.assertEqual(
