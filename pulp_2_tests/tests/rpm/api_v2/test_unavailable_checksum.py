@@ -3,7 +3,7 @@
 import unittest
 
 from pulp_smash import api, config
-from pulp_smash.pulp2.constants import REPOSITORY_PATH
+from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
 from pulp_smash.exceptions import TaskReportError
 from pulp_smash.pulp2.utils import publish_repo, search_units, sync_repo
 
@@ -24,6 +24,18 @@ from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:
 
 class UnavailableChecksumTestCase(unittest.TestCase):
     """Publish a lazily-synced repository with unavailable checksum types."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Delete orphan files.
+
+        This is necessary to assure that the content unit is not already
+        present in Pulp with a different checksum type. See `Pulp #4157
+        <https://pulp.plan.io/issues/4157>`_.
+        """
+        cls.cfg = config.get_config()
+        cls.client = api.Client(cls.cfg, api.json_handler)
+        cls.client.delete(ORPHANS_PATH)
 
     def test_rpm(self):
         """Publish a RPM repo. See :meth:`do_test`."""
@@ -54,31 +66,28 @@ class UnavailableChecksumTestCase(unittest.TestCase):
         This test targets `Pulp Smash #287
         <https://github.com/PulpQE/pulp-smash/issues/287>`_.
         """
-        cfg = config.get_config()
-        client = api.Client(cfg, api.json_handler)
-
         # Create and sync a repository.
         body = gen_repo()
         body['importer_config']['download_policy'] = 'on_demand'
         body['importer_config']['feed'] = feed
         body['distributors'] = [gen_distributor()]
-        repo = client.post(REPOSITORY_PATH, body)
-        self.addCleanup(client.delete, repo['_href'])
-        sync_repo(cfg, repo)
-        repo = client.get(repo['_href'], params={'details': True})
+        repo = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
+        repo = self.client.get(repo['_href'], params={'details': True})
 
         # Figure out which checksum type the units in the repository use.
-        units = search_units(cfg, repo, {'type_ids': type_id})
+        units = search_units(self.cfg, repo, {'type_ids': type_id})
         checksums = {'md5', 'sha1', 'sha256'}
 
         # Publish this repo with checksums that aren't available.
         checksums -= {units[0]['metadata']['checksumtype']}
         for checksum in checksums:
-            client.put(repo['distributors'][0]['_href'], {
+            self.client.put(repo['distributors'][0]['_href'], {
                 'distributor_config': {'checksum_type': checksum}
             })
             with self.assertRaises(TaskReportError):
-                publish_repo(cfg, repo)
+                publish_repo(self.cfg, repo)
 
 
 class UpdatedChecksumTestCase(unittest.TestCase):
