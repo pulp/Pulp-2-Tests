@@ -437,7 +437,7 @@ class NonExistentRepoTestCase(unittest.TestCase):
 
 
 class SyncSha512RPMPackageTestCase(unittest.TestCase):
-    """Test whether user can sync content from RPM repo with sha512 checksum."""
+    """Test whether user can sync RPM repo with sha512 checksum."""
 
     def test_all(self):
         """Test whether RPM repo with sha512 checksum is synced correctly.
@@ -453,6 +453,8 @@ class SyncSha512RPMPackageTestCase(unittest.TestCase):
         <https://pulp.plan.io/issues/4007>`_.
         """
         cfg = config.get_config()
+        if cfg.pulp_version < Version('2.18'):
+            raise unittest.SkipTest('This test requires Pulp 2.18 or newer.')
         client = api.Client(cfg, api.json_handler)
         body = gen_repo(
             importer_config={'feed': RPM_SHA_512_FEED_URL},
@@ -462,6 +464,7 @@ class SyncSha512RPMPackageTestCase(unittest.TestCase):
         self.addCleanup(client.delete, repo['_href'])
         sync_repo(cfg, repo)
         repo = client.get(repo['_href'], params={'details': True})
+
         # retrieving the published repo
         xml_element = get_repodata_repomd_xml(cfg, repo['distributors'][0])
         xpath = (
@@ -474,4 +477,8 @@ class SyncSha512RPMPackageTestCase(unittest.TestCase):
             for element in xml_element.findall(xpath)
         }
         self.assertEqual(checksum_type, {'sha512'}, checksum_type)
-        self.assertEqual(repo['content_unit_counts']['rpm'], RPM_UNSIGNED_FEED_COUNT)
+        self.assertEqual(
+            repo['content_unit_counts']['rpm'],
+            RPM_UNSIGNED_FEED_COUNT,
+            repo['content_unit_counts']['rpm'],
+        )
