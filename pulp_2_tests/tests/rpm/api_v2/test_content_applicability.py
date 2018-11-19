@@ -18,10 +18,16 @@ from pulp_smash.pulp2.constants import (
 )
 from pulp_smash.pulp2.utils import publish_repo, sync_repo
 
+from packaging.version import Version
 from pulp_2_tests.constants import (
+    MODULE_DATA_2,
+    MODULE_ERRATA_RPM_DATA,
+    MODULE_ARTIFACT_RPM_DATA,
+    MODULE_ARTIFACT_RPM_DATA_2,
     RPM_UNSIGNED_FEED_URL,
     RPM_DATA,
     RPM2_DATA,
+    RPM_WITH_MODULES_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_consumer,
@@ -50,6 +56,24 @@ RPM_WITHOUT_ERRATUM_METADATA = MappingProxyType({
     'vendor': RPM2_DATA['metadata']['vendor'],
 })
 """Metadata for an RPM without an associated erratum."""
+
+MODULES_METADATA = MappingProxyType({
+    'name': MODULE_ERRATA_RPM_DATA['rpm_name'],
+    'stream': MODULE_ERRATA_RPM_DATA['stream_name'],
+    'version': MODULE_ERRATA_RPM_DATA['version'],
+    'context': MODULE_ERRATA_RPM_DATA['context'],
+    'arch': MODULE_ERRATA_RPM_DATA['arch'],
+})
+"""Metadata for a Module."""
+
+MODULES_METADATA_2 = MappingProxyType({
+    'name': MODULE_DATA_2['name'],
+    'stream': MODULE_DATA_2['stream'],
+    'version': MODULE_DATA_2['version'],
+    'context': MODULE_DATA_2['context'],
+    'arch': MODULE_DATA_2['arch'],
+})
+"""Metadata for another Module."""
 
 CONTENT_APPLICABILITY_REPORT_SCHEMA = {
     '$schema': 'http://json-schema.org/schema#',
@@ -259,3 +283,206 @@ class BasicTestCase(unittest.TestCase):
                 applicability[0]['consumers'],
                 [consumer['consumer']['id']],
             )
+
+
+class ModularApplicabilityTestCase(unittest.TestCase):
+    """Perform modular repo applicability generation tasks.
+
+    Specifically, do the following:
+
+    1. Create a consumer.
+    2. Bind the consumer to the modular repository
+       ``RPM_WITH_MODULES_FEED_URL``.
+    3. Create a consumer profile with:
+       * List of RPMs
+       * List of Modules.
+    4. Regenerate applicability for the consumer.
+    5. Fetch applicability for the consumer. Verify that the packages
+       are eligible for upgrade.
+
+    This test targets the following:
+
+    * `Pulp #4158 <https://pulp.plan.io/issues/4158>`_
+    * `Pulp #4179 <https://pulp.plan.io/issues/4179>`_
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Create and sync a repository.
+
+        The regular test methods that run after this can create consumers that
+        bind to this repository.
+        """
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.18'):
+            raise unittest.SkipTest('This test requires Pulp 2.18 or newer.')
+        cls.client = api.Client(cls.cfg, api.json_handler)
+
+    def test_modular_rpm(self):
+        """Verify content is made available if appropriate.
+
+        This Tests the following:
+
+        1. Create a consumer profile with an RPM version less than the
+           module.
+        2. Bind the consumer to the modular repo.
+        3. Verify the content is applicable.
+        """
+        # Reduce the versions to check whether newer version applies.
+        rpm_with_modules_metadata = MODULE_ARTIFACT_RPM_DATA.copy()
+        rpm_with_modules_metadata['version'] = '5'
+        modules_metadata = MODULES_METADATA.copy()
+        applicability = self.do_test(
+            [modules_metadata],
+            [rpm_with_modules_metadata]
+        )
+        validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
+        with self.subTest(comment='verify Modules listed in report'):
+            self.assertEqual(
+                len(applicability[0]['applicability']['modulemd']),
+                1,
+                applicability[0]['applicability']['modulemd'],
+            )
+
+    def test_mixed_rpm(self):
+        """Verify content is made available for both modular/non modular RPMs.
+
+        This Tests the following:
+
+        1. Create a consumer profile containing both modular and non modular
+           RPMs.
+        2. Bind the consumer to the modular repo.
+        3. Verify the content is applicable.
+        """
+        # Reduce the versions to check whether newer version applies.
+        rpm_with_modules_metadata = MODULE_ARTIFACT_RPM_DATA.copy()
+        rpm_with_modules_metadata['version'] = '5'
+        modules_metadata = MODULES_METADATA.copy()
+        rpm_with_erratum_metadata = RPM_WITH_ERRATUM_METADATA.copy()
+        rpm_with_erratum_metadata['version'] = '4.0'
+        applicability = self.do_test(
+            [modules_metadata],
+            [rpm_with_modules_metadata, rpm_with_modules_metadata]
+        )
+        validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
+        with self.subTest(comment='verify Modules listed in report'):
+            self.assertEqual(
+                len(applicability[0]['applicability']['modulemd']),
+                1,
+                applicability[0]['applicability']['modulemd'],
+            )
+        with self.subTest(comment='verify Modules listed in report'):
+            self.assertEqual(
+                len(applicability[0]['applicability']['rpm']),
+                1,
+                applicability[0]['applicability']['rpm'],
+            )
+
+    def test_dependent_modules(self):
+        """Verify dependent modules are made available.
+
+        1. Bind the consumer with the modular repo.
+        2. Update the consumer profile with dependent modules.
+        3. Verify that the content is made available for the consumer.
+        """
+        # Reduce the versions to check whether newer version applies.
+        rpm_with_modules_metadata = MODULE_ARTIFACT_RPM_DATA.copy()
+        rpm_with_modules_metadata['version'] = '5'
+
+        rpm_with_modules_metadata_2 = MODULE_ARTIFACT_RPM_DATA_2.copy()
+        rpm_with_modules_metadata['version'] = '0.5'
+
+        modules_metadata = MODULES_METADATA.copy()
+        modules_metadata_2 = MODULES_METADATA_2.copy()
+        applicability = self.do_test(
+            [modules_metadata, modules_metadata_2],
+            [rpm_with_modules_metadata, rpm_with_modules_metadata_2]
+        )
+        validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
+        with self.subTest(comment='verify Modules listed in report'):
+            self.assertEqual(
+                len(applicability[0]['applicability']['modulemd']),
+                2,
+                applicability[0]['applicability']['modulemd'],
+            )
+
+    def test_negative(self):
+        """Verify content is not made available when inappropriate.
+
+        Do the same as :meth:`test_modular_rpm`, except that the version should
+        be higher than what is offered by the module.
+        """
+        rpm_with_modules_metadata = MODULE_ARTIFACT_RPM_DATA.copy()
+        rpm_with_modules_metadata['version'] = '7'
+        modules_metadata = MODULES_METADATA.copy()
+        applicability = self.do_test(
+            [modules_metadata],
+            [rpm_with_modules_metadata],
+        )
+        validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
+        with self.subTest(comment='verify Modules listed in report'):
+            self.assertEqual(
+                len(applicability[0]['applicability']['modulemd']),
+                0,
+                applicability[0]['applicability']['modulemd'],
+            )
+
+    def do_test(self, modules_profile, rpm_profile):
+        """Regenerate and fetch applicability for the given modules and Rpms.
+
+        This method does the following:
+        1. Create a Modular Repo in pulp
+        2. Create a consumer and bind them to the modular repo.
+        3. Create consumer profiles for the passed modules and rpms.
+        4. Regenerate and return the fetched applicablity.
+
+        :param modules_profile: A list of modules for the consumer profile.
+        :param rpm_profile: A list of rpms for the consumer profile.
+
+        :returns: A dict containing the consumer ``applicability``.
+        """
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+        repo = self.client.post(REPOSITORY_PATH, body)
+        sync_repo(self.cfg, repo)
+        repo = self.client.get(repo['_href'], params={'details': True})
+        self.addCleanup(self.client.delete, repo['_href'])
+
+        # Create a consumer.
+        consumer = self.client.post(CONSUMERS_PATH, gen_consumer())
+        self.addCleanup(self.client.delete, consumer['consumer']['_href'])
+
+        # Bind the consumer.
+        self.client.post(urljoin(consumer['consumer']['_href'], 'bindings/'), {
+            'distributor_id': repo['distributors'][0]['id'],
+            'notify_agent': False,
+            'repo_id': repo['id'],
+        })
+
+        # Create a consumer profile with RPM
+        self.client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
+            'content_type': 'rpm',
+            'profile': rpm_profile
+        })
+
+        # Create a consumer profile.
+        self.client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
+            'content_type': 'modulemd',
+            'profile': modules_profile
+        })
+
+        # Regenerate applicability.
+        self.client.post(CONSUMERS_ACTIONS_CONTENT_REGENERATE_APPLICABILITY_PATH, {
+            'consumer_criteria': {
+                'filters': {'id': {'$in': [consumer['consumer']['id']]}}
+            }
+        })
+
+        # Fetch and Return applicability.
+        return self.client.post(CONSUMERS_CONTENT_APPLICABILITY_PATH, {
+            'criteria': {
+                'filters': {'id': {'$in': [consumer['consumer']['id']]}}
+            },
+        })

@@ -159,6 +159,16 @@ MODULE_ERRATA_RPM_DATA = MappingProxyType({
 })
 """The custom errata information for uploading an errata file."""
 
+MODULE_DATA_2 = MappingProxyType({
+    'arch': 'noarch',
+    'context': 'deadbeef',
+    'description': 'A module for the duck 0.8 package',
+    'name': 'duck',
+    'stream': '0',
+    'version': '201809302113907',
+})
+"""A custom module information."""
+
 MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType({
     'name': 'walrus',
     'stream': '0.71',
@@ -170,6 +180,26 @@ MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType({
 
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
 """
+
+MODULE_ARTIFACT_RPM_DATA = MappingProxyType({
+    'name': 'walrus',
+    'version': '5.21',
+    'release': 'livebeef',
+    'arch': 'noarch',
+    'epoch': '0',
+    'vendor': 'GPLv2'
+})
+"""Details of the RPM file associated with ``MODULE_ERRATA_RPM_DATA``"""
+
+MODULE_ARTIFACT_RPM_DATA_2 = MappingProxyType({
+    'name': 'duck',
+    'version': '0.6',
+    'release': 'livebeef',
+    'arch': 'noarch',
+    'epoch': '0',
+    'vendor': 'GPLv2'
+})
+"""Details of the RPM file associated with ``MODULE_DATA_2``"""
 
 OPENSUSE_FEED_URL = 'https://download.opensuse.org/update/leap/42.3/oss/'
 """The URL to an openSUSE repository.
