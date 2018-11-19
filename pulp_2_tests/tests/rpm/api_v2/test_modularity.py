@@ -384,11 +384,12 @@ class CheckIsModularFlagTestCase(unittest.TestCase):
         * `Pulp #4146 <https://pulp.plan.io/issues/4146>`_.
         """
         cfg = config.get_config()
+        if cfg.pulp_version < Version('2.18'):
+            raise unittest.SkipTest('This test requires Pulp 2.18 or newer.')
         client = api.Client(cfg, api.json_handler)
         body = gen_repo(
             importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
             distributors=[gen_distributor()]
-
         )
         repo = client.post(REPOSITORY_PATH, body)
         self.addCleanup(client.delete, repo['_href'])
