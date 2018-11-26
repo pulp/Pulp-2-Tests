@@ -54,7 +54,7 @@ lint-flake8:
 # clone of the Pulp Smash repository, pylint will conclude that Pulp Smash is
 # not a third party library.
 lint-pylint:
-	pylint -j $(CPU_COUNT) --reports=n --disable=I,wrong-import-order \
+	pylint -j $(CPU_COUNT) --reports=n --disable=I,wrong-import-order,simplifiable-if-expression \
 		docs/conf.py \
 		pulp_2_tests \
 		setup.py
