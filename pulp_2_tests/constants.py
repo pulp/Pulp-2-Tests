@@ -184,10 +184,11 @@ MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType({
 MODULE_ARTIFACT_RPM_DATA = MappingProxyType({
     'name': 'walrus',
     'version': '5.21',
-    'release': 'livebeef',
+    'release': '1',
     'arch': 'noarch',
     'epoch': '0',
-    'vendor': 'GPLv2'
+    'vendor': 'GPLv2',
+    'src': 'http://www.fedoraproject.org'
 })
 """Details of the RPM file associated with ``MODULE_ERRATA_RPM_DATA``"""
 

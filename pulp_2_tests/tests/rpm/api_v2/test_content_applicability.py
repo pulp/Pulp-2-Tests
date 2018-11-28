@@ -16,7 +16,12 @@ from pulp_smash.pulp2.constants import (
     CONSUMERS_PATH,
     REPOSITORY_PATH,
 )
-from pulp_smash.pulp2.utils import publish_repo, sync_repo
+from pulp_smash.pulp2.utils import (
+    publish_repo,
+    sync_repo,
+    upload_import_erratum,
+    utils
+)
 
 from packaging.version import Version
 from pulp_2_tests.constants import (
@@ -406,6 +411,30 @@ class ModularApplicabilityTestCase(unittest.TestCase):
                 applicability[0]['applicability']['modulemd'],
             )
 
+    def test_erratum_modules(self):
+        """Verify erratum modules are applicable.
+
+        1. Bind the consumer with erratum modular repo.
+        2. Verify the content is applicable.
+        """
+        # Reduce the versions to check whether newer version applies.
+        rpm_with_modules_metadata = MODULE_ARTIFACT_RPM_DATA.copy()
+        rpm_with_modules_metadata['version'] = '5'
+        modules_metadata = MODULES_METADATA.copy()
+        erratum = ModularApplicabilityTestCase.gen_modular_errata()
+        applicability = self.do_test(
+            [modules_metadata],
+            [rpm_with_modules_metadata],
+            erratum
+        )
+        validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
+        with self.subTest(comment='verify Modules listed in report'):
+            self.assertEqual(
+                len(applicability[0]['applicability']['erratum']),
+                1,
+                applicability[0]['applicability']['erratum'],
+            )
+
     def test_negative(self):
         """Verify content is not made available when inappropriate.
 
@@ -427,7 +456,7 @@ class ModularApplicabilityTestCase(unittest.TestCase):
                 applicability[0]['applicability']['modulemd'],
             )
 
-    def do_test(self, modules_profile, rpm_profile):
+    def do_test(self, modules_profile, rpm_profile, erratum=None):
         """Regenerate and fetch applicability for the given modules and Rpms.
 
         This method does the following:
@@ -438,6 +467,7 @@ class ModularApplicabilityTestCase(unittest.TestCase):
 
         :param modules_profile: A list of modules for the consumer profile.
         :param rpm_profile: A list of rpms for the consumer profile.
+        :param erratum: An Erratum to be added to the repo.
 
         :returns: A dict containing the consumer ``applicability``.
         """
@@ -448,6 +478,8 @@ class ModularApplicabilityTestCase(unittest.TestCase):
         repo = self.client.post(REPOSITORY_PATH, body)
         sync_repo(self.cfg, repo)
         repo = self.client.get(repo['_href'], params={'details': True})
+        if erratum is not None:
+            upload_import_erratum(self.cfg, erratum, repo)
         self.addCleanup(self.client.delete, repo['_href'])
 
         # Create a consumer.
@@ -462,16 +494,18 @@ class ModularApplicabilityTestCase(unittest.TestCase):
         })
 
         # Create a consumer profile with RPM
-        self.client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
-            'content_type': 'rpm',
-            'profile': rpm_profile
-        })
+        if rpm_profile:
+            self.client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
+                'content_type': 'rpm',
+                'profile': rpm_profile
+            })
 
-        # Create a consumer profile.
-        self.client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
-            'content_type': 'modulemd',
-            'profile': modules_profile
-        })
+        # Create a consumer profile with modules.
+        if modules_profile:
+            self.client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
+                'content_type': 'modulemd',
+                'profile': modules_profile
+            })
 
         # Regenerate applicability.
         self.client.post(CONSUMERS_ACTIONS_CONTENT_REGENERATE_APPLICABILITY_PATH, {
@@ -486,3 +520,48 @@ class ModularApplicabilityTestCase(unittest.TestCase):
                 'filters': {'id': {'$in': [consumer['consumer']['id']]}}
             },
         })
+
+    @staticmethod
+    def gen_modular_errata():
+        """Generate and return a modular erratum with RPM."""
+        return {
+            'id': utils.uuid4(),
+            'status': 'stable',
+            'updated': MODULE_ERRATA_RPM_DATA['updated'],
+            'rights': None,
+            'from': MODULE_ERRATA_RPM_DATA['from'],
+            'description': MODULE_ERRATA_RPM_DATA['description'],
+            'title': MODULE_ERRATA_RPM_DATA['rpm_name'],
+            'issued': MODULE_ERRATA_RPM_DATA['issued'],
+            'relogin_suggested': False,
+            'restart_suggested': False,
+            'solution': None,
+            'summary': None,
+            'pushcount': '1',
+            'version': '1',
+            'references': [],
+            'release': '1',
+            'reboot_suggested': None,
+            'type': 'enhancement',
+            'severity': None,
+            'pkglist': [{
+                'name': MODULE_ERRATA_RPM_DATA['collection_name'],
+                'short': '0',
+                'module': {
+                    'name': MODULE_ERRATA_RPM_DATA['rpm_name'],
+                    'stream': MODULE_ERRATA_RPM_DATA['stream_name'],
+                    'version': MODULE_ERRATA_RPM_DATA['version'],
+                    'arch': MODULE_ERRATA_RPM_DATA['arch'],
+                    'context': MODULE_ERRATA_RPM_DATA['context']
+                },
+                'packages': [
+                    {
+                        'arch': MODULE_ARTIFACT_RPM_DATA['arch'],
+                        'name': MODULE_ARTIFACT_RPM_DATA['name'],
+                        'release': MODULE_ARTIFACT_RPM_DATA['release'],
+                        'version': MODULE_ARTIFACT_RPM_DATA['version'],
+                        'src': MODULE_ARTIFACT_RPM_DATA['src']
+                    }
+                ]
+            }]
+        }
