@@ -145,7 +145,7 @@ class ManageModularContentTestCase(unittest.TestCase):
         return self.client.get(repo['_href'], params={'details': True})
 
     def copy_content_between_repos(self, recursive, criteria):
-        """Create two repos and copy content between them."""
+        """Create two repositories and copy content between them."""
         # repo1
         repo1 = self.create_sync_modular_repo()
 
@@ -183,8 +183,8 @@ class ManageModularContentTestCase(unittest.TestCase):
             repo['content_unit_counts']['modulemd'],
             repo_initial['content_unit_counts']['modulemd'] - 1,
             repo['content_unit_counts'])
-        # after removing a module 'X', the number of rpms in the repo should
-        # decrease by the number of rpms present in 'X'.
+        # after removing a module 'X', the number of RPMS in the repo should
+        # decrease by the number of RPMS present in 'X'.
         self.assertEqual(
             repo['content_unit_counts']['rpm'],
             repo_initial['content_unit_counts']['rpm'] - 1,
@@ -228,15 +228,17 @@ class ManageModularContentTestCase(unittest.TestCase):
 
 
 class PackageManagerModuleListTestCase(unittest.TestCase):
-    """Package manager can read module list from a Pulp repo."""
+    """Package manager can read module list from a Pulp repository."""
 
     def test_all(self):
-        """Verify whether package manager can read module list from a Pulp repo."""
+        """Package manager can read module list from a Pulp repository."""
         cfg = config.get_config()
         if cfg.pulp_version < Version('2.17'):
-            raise unittest.SkipTest('This test requires at least Pulp 2.17 or newer.')
+            raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
         if not os_support_modularity(cfg):
-            raise unittest.SkipTest('This test requires an OS that supports modularity.')
+            raise unittest.SkipTest(
+                'This test requires an OS that supports modularity.'
+            )
         client = api.Client(cfg, api.json_handler)
         body = gen_repo(
             importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
@@ -270,7 +272,7 @@ class PackageManagerModuleListTestCase(unittest.TestCase):
 
 
 class UploadModuleTestCase(unittest.TestCase):
-    """Upload a module.yaml file and test upload import in Pulp repo."""
+    """Upload a module.yaml file and test upload import in Pulp repository."""
 
     @classmethod
     def setUpClass(cls):
@@ -281,8 +283,8 @@ class UploadModuleTestCase(unittest.TestCase):
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_upload_module(self):
-        """Verify whether uploaded module.yaml is reflected in the pulp repo."""
-        # Create a normal Repo without any data.
+        """Verify whether uploaded module.yaml is updated in the pulp repo."""
+        # Create a normal repo without any data.
         body = gen_repo(
             importer_config={'feed': RPM_UNSIGNED_FEED_URL},
             distributors=[gen_distributor()]
@@ -299,13 +301,17 @@ class UploadModuleTestCase(unittest.TestCase):
             'unit_type_id': 'modulemd',
         }, repo)
         repo = self.client.get(repo['_href'], params={'details': True})
+
         # Assert that `modulemd` and `modulemd_defaults` are present on the
         # repository.
         self.assertIsNotNone(repo['content_unit_counts']['modulemd'])
         self.assertIsNotNone(repo['content_unit_counts']['modulemd_defaults'])
 
     def test_one_default_per_repo(self):
-        """Verify changing the modules default content of modules.yaml do not affects repo."""
+        """Verify changing the modules default content of modules.yaml.
+
+        Do not modifies the repo.
+        """
         # create repo
         body = gen_repo(
             importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
@@ -338,7 +344,7 @@ class UploadModuleTestCase(unittest.TestCase):
     def _get_module_yaml_file(path):
         """Return the path to ``modules.yaml``, relative to repository root.
 
-        Given a detailed dict of information about a published, repository,
+        Given a detailed dict of information about a published repository,
         parse that repository's ``repomd.xml`` file and tell the path to the
         repository's ``[…]-modules.yaml`` file. The path is likely to be in the
         form ``repodata/[…]-modules.yaml.gz``.
