@@ -1,5 +1,7 @@
 # coding=utf-8
 """Tests that perform actions over RPM modular repositories."""
+import gzip
+import io
 import unittest
 from urllib.parse import urljoin
 from xml.etree import ElementTree
@@ -361,6 +363,9 @@ class UploadModuleTestCase(unittest.TestCase):
         xpath = '{{{}}}location'.format(RPM_NAMESPACES['metadata/repo'])
         relative_path = data_elements[0].find(xpath).get('href')
         unit = utils.http_get(urljoin(path, relative_path))
+        with io.BytesIO(unit) as compressed:
+            with gzip.GzipFile(fileobj=compressed) as decompressed:
+                unit = decompressed.read()
         return unit
 
 
