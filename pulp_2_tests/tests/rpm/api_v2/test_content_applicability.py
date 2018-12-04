@@ -25,13 +25,13 @@ from pulp_smash.pulp2.utils import (
 
 from packaging.version import Version
 from pulp_2_tests.constants import (
-    MODULE_DATA_2,
-    MODULE_ERRATA_RPM_DATA,
     MODULE_ARTIFACT_RPM_DATA,
     MODULE_ARTIFACT_RPM_DATA_2,
-    RPM_UNSIGNED_FEED_URL,
-    RPM_DATA,
+    MODULE_DATA_2,
+    MODULE_ERRATA_RPM_DATA,
     RPM2_DATA,
+    RPM_DATA,
+    RPM_UNSIGNED_FEED_URL,
     RPM_WITH_MODULES_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
@@ -299,7 +299,7 @@ class ModularApplicabilityTestCase(unittest.TestCase):
     2. Bind the consumer to the modular repository
        ``RPM_WITH_MODULES_FEED_URL``.
     3. Create a consumer profile with:
-       * List of RPMs
+       * List of RPMs.
        * List of Modules.
     4. Regenerate applicability for the consumer.
     5. Fetch applicability for the consumer. Verify that the packages
@@ -313,11 +313,7 @@ class ModularApplicabilityTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Create and sync a repository.
-
-        The regular test methods that run after this can create consumers that
-        bind to this repository.
-        """
+        """Create class-wide variables."""
         cls.cfg = config.get_config()
         if cls.cfg.pulp_version < Version('2.18'):
             raise unittest.SkipTest('This test requires Pulp 2.18 or newer.')
@@ -326,7 +322,7 @@ class ModularApplicabilityTestCase(unittest.TestCase):
     def test_modular_rpm(self):
         """Verify content is made available if appropriate.
 
-        This Tests the following:
+        This test does the following:
 
         1. Create a consumer profile with an RPM version less than the
            module.
@@ -349,10 +345,31 @@ class ModularApplicabilityTestCase(unittest.TestCase):
                 applicability[0]['applicability']['modulemd'],
             )
 
+    def test_negative_modular_rpm(self):
+        """Verify content is not made available when inappropriate.
+
+        Do the same as :meth:`test_modular_rpm`, except that the version should
+        be higher than what is offered by the module.
+        """
+        rpm_with_modules_metadata = MODULE_ARTIFACT_RPM_DATA.copy()
+        rpm_with_modules_metadata['version'] = '7'
+        modules_metadata = MODULES_METADATA.copy()
+        applicability = self.do_test(
+            [modules_metadata],
+            [rpm_with_modules_metadata],
+        )
+        validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
+        with self.subTest(comment='verify Modules listed in report'):
+            self.assertEqual(
+                len(applicability[0]['applicability']['modulemd']),
+                0,
+                applicability[0]['applicability']['modulemd'],
+            )
+
     def test_mixed_rpm(self):
         """Verify content is made available for both modular/non modular RPMs.
 
-        This Tests the following:
+        This test does the following:
 
         1. Create a consumer profile containing both modular and non modular
            RPMs.
@@ -386,6 +403,8 @@ class ModularApplicabilityTestCase(unittest.TestCase):
     def test_dependent_modules(self):
         """Verify dependent modules are made available.
 
+        This test does the following:
+
         1. Bind the consumer with the modular repo.
         2. Update the consumer profile with dependent modules.
         3. Verify that the content is made available for the consumer.
@@ -414,6 +433,8 @@ class ModularApplicabilityTestCase(unittest.TestCase):
     def test_erratum_modules(self):
         """Verify erratum modules are applicable.
 
+        This test does the following:
+
         1. Bind the consumer with erratum modular repo.
         2. Verify the content is applicable.
         """
@@ -421,7 +442,7 @@ class ModularApplicabilityTestCase(unittest.TestCase):
         rpm_with_modules_metadata = MODULE_ARTIFACT_RPM_DATA.copy()
         rpm_with_modules_metadata['version'] = '5'
         modules_metadata = MODULES_METADATA.copy()
-        erratum = ModularApplicabilityTestCase.gen_modular_errata()
+        erratum = self.gen_modular_errata()
         applicability = self.do_test(
             [modules_metadata],
             [rpm_with_modules_metadata],
@@ -435,38 +456,18 @@ class ModularApplicabilityTestCase(unittest.TestCase):
                 applicability[0]['applicability']['erratum'],
             )
 
-    def test_negative(self):
-        """Verify content is not made available when inappropriate.
-
-        Do the same as :meth:`test_modular_rpm`, except that the version should
-        be higher than what is offered by the module.
-        """
-        rpm_with_modules_metadata = MODULE_ARTIFACT_RPM_DATA.copy()
-        rpm_with_modules_metadata['version'] = '7'
-        modules_metadata = MODULES_METADATA.copy()
-        applicability = self.do_test(
-            [modules_metadata],
-            [rpm_with_modules_metadata],
-        )
-        validate(applicability, CONTENT_APPLICABILITY_REPORT_SCHEMA)
-        with self.subTest(comment='verify Modules listed in report'):
-            self.assertEqual(
-                len(applicability[0]['applicability']['modulemd']),
-                0,
-                applicability[0]['applicability']['modulemd'],
-            )
-
     def do_test(self, modules_profile, rpm_profile, erratum=None):
-        """Regenerate and fetch applicability for the given modules and Rpms.
+        """Regenerate and fetch applicability for the given modules and RPMs.
 
         This method does the following:
-        1. Create a Modular Repo in pulp
+
+        1. Create a modular repo.
         2. Create a consumer and bind them to the modular repo.
         3. Create consumer profiles for the passed modules and rpms.
-        4. Regenerate and return the fetched applicablity.
+        4. Regenerate and return the fetched applicability.
 
         :param modules_profile: A list of modules for the consumer profile.
-        :param rpm_profile: A list of rpms for the consumer profile.
+        :param rpm_profile: A list of RPMs for the consumer profile.
         :param erratum: An Erratum to be added to the repo.
 
         :returns: A dict containing the consumer ``applicability``.
@@ -495,24 +496,26 @@ class ModularApplicabilityTestCase(unittest.TestCase):
 
         # Create a consumer profile with RPM
         if rpm_profile:
-            self.client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
-                'content_type': 'rpm',
-                'profile': rpm_profile
-            })
+            self.client.post(
+                urljoin(consumer['consumer']['_href'], 'profiles/'),
+                {'content_type': 'rpm', 'profile': rpm_profile}
+            )
 
         # Create a consumer profile with modules.
         if modules_profile:
-            self.client.post(urljoin(consumer['consumer']['_href'], 'profiles/'), {
-                'content_type': 'modulemd',
-                'profile': modules_profile
-            })
+            self.client.post(
+                urljoin(consumer['consumer']['_href'], 'profiles/'),
+                {'content_type': 'modulemd', 'profile': modules_profile}
+            )
 
         # Regenerate applicability.
-        self.client.post(CONSUMERS_ACTIONS_CONTENT_REGENERATE_APPLICABILITY_PATH, {
-            'consumer_criteria': {
-                'filters': {'id': {'$in': [consumer['consumer']['id']]}}
-            }
-        })
+        self.client.post(
+            CONSUMERS_ACTIONS_CONTENT_REGENERATE_APPLICABILITY_PATH,
+            {
+                'consumer_criteria': {
+                    'filters': {'id': {'$in': [consumer['consumer']['id']]}}}
+            },
+        )
 
         # Fetch and Return applicability.
         return self.client.post(CONSUMERS_CONTENT_APPLICABILITY_PATH, {
