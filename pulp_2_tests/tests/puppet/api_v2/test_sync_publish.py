@@ -561,6 +561,7 @@ class UploadPuppetModuleTestCase(unittest.TestCase):
 
         * `Pulp-2-tests #83 <https://github.com/PulpQE/Pulp-2-Tests/issues/83>`_
         * `Pulp #2769 <https://pulp.plan.io/issues/2769>`_
+        * `Pulp #4140 <https://pulp.plan.io/issues/4140>`_
         """
         cfg = config.get_config()
         if cfg.pulp_version < Version('2.18'):
