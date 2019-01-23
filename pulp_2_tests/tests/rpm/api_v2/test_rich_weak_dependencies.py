@@ -194,19 +194,18 @@ class CopyRecursiveUnitsTestCase(unittest.TestCase):
         cls.cfg = config.get_config()
         if cls.cfg.pulp_version < Version('2.17'):
             raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
-        if not rpm_rich_weak_dependencies(cls.cfg):
-            raise unittest.SkipTest('This test requires RPM 4.12 or newer.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_recursive(self):
-        """Test recursive copy of units for a repository with rich/weak depdendencies.
+        """Test recursive copy for a repository with rich/weak dependencies.
 
         See :meth:`do_test`."
         """
         repo = self.do_test(True)
         dst_unit_ids = [
             unit['metadata']['name'] for unit in
-            search_units(self.cfg, repo, {'type_ids': ['rpm']})]
+            search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
         self.assertEqual(
             len(dst_unit_ids),
             RPM2_RICH_WEAK_DATA['total_installed_packages'],
@@ -214,14 +213,15 @@ class CopyRecursiveUnitsTestCase(unittest.TestCase):
         )
 
     def test_non_recursive(self):
-        """Test simple copy of an unit for a repository with rich/weak depdendencies.
+        """Test simple copy for a repository with rich/weak dependencies.
 
         See :meth:`do_test`."
         """
         repo = self.do_test(False)
         dst_unit_ids = [
             unit['metadata']['name'] for unit in
-            search_units(self.cfg, repo, {'type_ids': ['rpm']})]
+            search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
         self.assertEqual(len(dst_unit_ids), 1, dst_unit_ids)
 
     def do_test(self, recursive):
@@ -234,8 +234,7 @@ class CopyRecursiveUnitsTestCase(unittest.TestCase):
         repos.append(self.client.post(REPOSITORY_PATH, body))
         self.addCleanup(self.client.delete, repos[0]['_href'])
         sync_repo(self.cfg, repos[0])
-        body = gen_repo()
-        repos.append(self.client.post(REPOSITORY_PATH, body))
+        repos.append(self.client.post(REPOSITORY_PATH, gen_repo()))
         self.addCleanup(self.client.delete, repos[1]['_href'])
         self.client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
             'source_repo_id': repos[0]['id'],
