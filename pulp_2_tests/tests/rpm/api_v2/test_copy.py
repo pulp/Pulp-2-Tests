@@ -5,6 +5,7 @@ import time
 import unittest
 from urllib.parse import urljoin
 
+from packaging.version import Version
 from pulp_smash import api, cli, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH, ORPHANS_PATH
 from pulp_smash.pulp2.utils import (
@@ -19,6 +20,7 @@ from pulp_2_tests.constants import (
     RPM_SIGNED_URL,
     RPM_UNSIGNED_FEED_URL,
     RPM_UPDATED_INFO_FEED_URL,
+    RPM_WITH_OLD_VERSION_URL,
     RPM_YUM_METADATA_FILE,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
@@ -230,3 +232,198 @@ class CopyYumMetadataFileTestCase(unittest.TestCase):
             1
         )
         self.assertGreater(len(yum_meta_data_element), 0)
+
+
+class CopyConservativeTestCase(unittest.TestCase):
+    """Test ``recursive`` and ``recursive_conservative`` flags during copy.
+
+    RPM packages used in this test case::
+
+        chimpanzee
+        ├── squirrel
+        │   ├── camel
+        │   └── fox
+        └── walrus
+
+    chimpanzee has dependencies: squirrel and walrus RPM packages.
+    squirrel has dependencies: camel and fox RPM packages.
+
+    walrus package has 2 different versions:  ``0.71`` and ``5.21``.
+
+    This test targets the following issues:
+
+    * `Pulp #4152 <https://pulp.plan.io/issues/4152>`_
+    * `Pulp #4269 <https://pulp.plan.io/issues/4269>`_
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Create class-wide variables."""
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.18.1'):
+            raise unittest.SkipTest('This test requires Pulp 2.18.1 or newer.')
+        cls.client = api.Client(cls.cfg, api.json_handler)
+
+    def test_recursive_noconservative_nodependency(self):
+        """Recursive, non-conservative, and no old dependency.
+
+        Do the following:
+
+        1. Copy ``chimpanzee`` RPM package from repository A to B using:
+           ``recursive`` as True, ``recursive_conservative`` as False, and no
+           older version of walrus package is present on the repo B before
+           the copy.
+        2. Assert that total number of RPM of units copied is equal to ``5``,
+           and the walrus package version is equal to ``5.21``.
+        """
+        repo = self.copy_units(True, False, False)
+        versions = [
+            unit['metadata']['version']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+            if unit['metadata']['name'] == 'walrus'
+        ]
+        self.assertEqual(len(versions), 1, versions)
+        self.assertEqual(versions[0], '5.21', versions)
+
+        dst_unit_ids = [
+            unit['metadata']['name']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
+        self.assertEqual(len(dst_unit_ids), 5, dst_unit_ids)
+
+    def test_recursive_conservative_nodepdendency(self):
+        """Recursive, conservative, and no old dependency.
+
+        Do the following:
+
+        1. Copy ``chimpanzee`` RPM package from repository A to B using:
+           ``recursive`` as True, ``recursive_conservative`` as True, and no
+           older version of walrus package is present on the repo B before
+           the copy.
+        2. Assert that total number of RPM of units copied is equal to ``5``,
+           and the walrus package version is equal to ``5.21``.
+        """
+        repo = self.copy_units(True, True, False)
+        versions = [
+            unit['metadata']['version']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+            if unit['metadata']['name'] == 'walrus'
+        ]
+        self.assertEqual(len(versions), 1, versions)
+        self.assertEqual(versions[0], '5.21', versions)
+
+        dst_unit_ids = [
+            unit['metadata']['name']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
+        self.assertEqual(len(dst_unit_ids), 5, dst_unit_ids)
+
+    def test_recursive_conservative_dependency(self):
+        """Recursive, conservative and with old dependency.
+
+        Do the following:
+
+        1. Copy ``chimpanzee`` RPM package from repository A to B using:
+           ``recursive`` as True, ``recursive_conservative`` as True, and an
+           older version of walrus package is present on the repo B before
+           the copy.
+        2. Assert that total number of RPM of units is equal to ``5``
+           and the walrus package version is equal to ``0.71``.
+        """
+        repo = self.copy_units(True, True, True)
+        versions = [
+            unit['metadata']['version']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+            if unit['metadata']['name'] == 'walrus'
+        ]
+        self.assertEqual(len(versions), 1, versions)
+        self.assertEqual(versions[0], '0.71', versions)
+
+        dst_unit_ids = [
+            unit['metadata']['name']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
+        self.assertEqual(len(dst_unit_ids), 5, dst_unit_ids)
+
+    def test_norecursive_conservative_dependency(self):
+        """Non-recursive, conservative, with old dependency.
+
+        Do the following:
+
+        1. Copy ``chimpanzee`` RPM package from repository A to B using:
+           ``recursive`` as False, ``recursive_conservative`` as True, and
+           an older version of walrus package is present on the repo B
+           before the copy.
+        2. Assert that total number of RPM of units is equal to ``5``,
+           and the walrus package version is equal to ``0.71``.
+        """
+        repo = self.copy_units(False, True, True)
+        versions = [
+            unit['metadata']['version']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+            if unit['metadata']['name'] == 'walrus'
+        ]
+        self.assertEqual(len(versions), 1, versions)
+        self.assertEqual(versions[0], '0.71', versions)
+
+        dst_unit_ids = [
+            unit['metadata']['name']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
+        self.assertEqual(len(dst_unit_ids), 5, dst_unit_ids)
+
+    def test_norecursive_noconservative_nodependency(self):
+        """Non-recursive, non-conservative, and no old dependency.
+
+        Do the following:
+
+        1. Copy ``chimpanzee`` RPM package from repository A to B using:
+           ``recursive`` as False, ``recursive_conservative`` as False, and no
+           older version of walrus package is present on the repo B before
+           the copy.
+        2. Assert that total number of RPM of units copied is equal to ``1``.
+        """
+        repo = self.copy_units(False, False, False)
+        dst_unit_ids = [
+            unit['metadata']['name']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
+        self.assertEqual(len(dst_unit_ids), 1, dst_unit_ids)
+
+    def copy_units(self, recursive, recursive_conservative, old_dependency):
+        """Copy units using ``recursive`` and  ``recursive_conservative``."""
+        repos = []
+        body = gen_repo(
+            importer_config={'feed': RPM_UNSIGNED_FEED_URL},
+            distributors=[gen_distributor()]
+        )
+        repos.append(self.client.post(REPOSITORY_PATH, body))
+        self.addCleanup(self.client.delete, repos[0]['_href'])
+        sync_repo(self.cfg, repos[0])
+        repos.append(self.client.post(REPOSITORY_PATH, gen_repo()))
+        self.addCleanup(self.client.delete, repos[1]['_href'])
+
+        # `old_dependency` will import an older version, `0.71` of walrus to
+        # the destiny repostiory.
+        if old_dependency:
+            rpm = utils.http_get(RPM_WITH_OLD_VERSION_URL)
+            upload_import_unit(
+                self.cfg,
+                rpm,
+                {'unit_type_id': 'rpm'}, repos[1]
+            )
+            units = search_units(self.cfg, repos[1], {'type_ids': ['rpm']})
+            self.assertEqual(len(units), 1, units)
+
+        self.client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
+            'source_repo_id': repos[0]['id'],
+            'override_config': {
+                'recursive': recursive,
+                'recursive_conservative': recursive_conservative,
+            },
+            'criteria': {
+                'filters': {'unit': {'name': 'chimpanzee'}},
+                'type_ids': ['rpm'],
+            },
+        })
+        return self.client.get(repos[1]['_href'], params={'details': True})
