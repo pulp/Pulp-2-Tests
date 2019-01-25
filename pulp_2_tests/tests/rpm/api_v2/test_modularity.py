@@ -28,6 +28,7 @@ from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
     get_repodata,
+    get_repodata_repomd_xml,
 )
 from pulp_2_tests.tests.rpm.utils import (
     gen_yum_config_file,
@@ -430,3 +431,74 @@ class CheckIsModularFlagTestCase(unittest.TestCase):
             RPM_UNSIGNED_FEED_COUNT - sum(MODULE_FIXTURES_PACKAGES.values()),
             non_modular_units
         )
+
+
+class CheckModulesYamlTestCase(unittest.TestCase):
+    """Check whether modules.yaml is available if appropriate."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create class wide variables."""
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.18'):
+            raise unittest.SkipTest('This test requires Pulp 2.18 or newer.')
+        cls.client = api.Client(cls.cfg, api.json_handler)
+
+    def test_no_modules_yaml_generated_non_modular(self):
+        """Verify no ``modules.yaml`` is generated for non modular content.
+
+        This test does the following
+
+        1. Create and sync a non-modular content.
+        2. Publish the synced content.
+        3. Check whether no modules.yaml is generated for published content.
+
+        This test case targets:
+
+        * `Pulp #4252 <https://pulp.plan.io/issues/4252>`_.
+        * `Pulp #4350 <https://pulp.plan.io/issues/4350>`_.
+        """
+        body = gen_repo(
+            importer_config={'feed': RPM_UNSIGNED_FEED_URL},
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+        # Step 1 and 2
+        repo = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
+        repo = self.client.get(repo['_href'], params={'details': True})
+        # Step 3
+        files = self.list_repo_data_files(self.cfg, repo)
+        # check no modules.yaml.gz is found
+        self.assertFalse(bool(files))
+        modules_elements = self.get_modules_elements_repomd(
+            self.cfg,
+            repo['distributors'][0]
+        )
+        self.assertFalse(bool(modules_elements))
+
+    @staticmethod
+    def list_repo_data_files(cfg, repo):
+        """Return a list of all the files present inside repodata dir."""
+        return cli.Client(cfg).run((
+            'find',
+            '/var/lib/pulp/published/yum/master/yum_distributor/{}/'.format(
+                repo['id']
+            ),
+            '-type',
+            'f',
+            '-name',
+            '*modules.yaml.gz'
+        )).stdout.splitlines()
+
+    @staticmethod
+    def get_modules_elements_repomd(cfg, distributor):
+        """Return a list of elements present inside the repomd.xml."""
+        repomd_xml = get_repodata_repomd_xml(cfg, distributor)
+        xpath = (
+            "{{{namespace}}}data[@type='{type_}']".format(
+                namespace=RPM_NAMESPACES['metadata/repo'],
+                type_='modules'
+            )
+        )
+        return repomd_xml.findall(xpath)
