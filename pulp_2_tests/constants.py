@@ -641,6 +641,9 @@ Built from :data:`RPM_UNSIGNED_FEED_URL` and :data:`RPM2`.
 RPM_WITH_MODULES_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-modules/')
 """The URL to a modular RPM repository."""
 
+RPM_WITH_MODULES_SHA1_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-sha-1-modular/')
+"""The URL to a modular RPM repository with SHA1 checksum."""
+
 RPM_WITH_PULP_DISTRIBUTION_FEED_URL = urljoin(
     PULP_FIXTURES_BASE_URL, 'rpm-with-pulp-distribution/')
 """The URL to a RPM repository with a PULP_DISTRIBUTION.xml file."""
