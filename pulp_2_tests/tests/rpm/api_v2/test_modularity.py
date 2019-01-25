@@ -23,6 +23,7 @@ from pulp_2_tests.constants import (
     RPM_UNSIGNED_FEED_COUNT,
     RPM_UNSIGNED_FEED_URL,
     RPM_WITH_MODULES_FEED_URL,
+    RPM_WITH_MODULES_SHA1_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
@@ -440,8 +441,8 @@ class CheckModulesYamlTestCase(unittest.TestCase):
     def setUpClass(cls):
         """Create class wide variables."""
         cls.cfg = config.get_config()
-        if cls.cfg.pulp_version < Version('2.18'):
-            raise unittest.SkipTest('This test requires Pulp 2.18 or newer.')
+        if cls.cfg.pulp_version < Version('2.18.1'):
+            raise unittest.SkipTest('This test requires Pulp 2.18.1 or newer.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_no_modules_yaml_generated_non_modular(self):
@@ -477,6 +478,34 @@ class CheckModulesYamlTestCase(unittest.TestCase):
         )
         self.assertFalse(bool(modules_elements))
 
+    def test_sha1_modules_yaml(self):
+        """Verify whether the published modular content has appropriate sha.
+
+        This test does the following:
+
+        1. Create and sync a modular content with sha1 checksum.
+        2. Publish the synced content
+        3. Check whether the modules.yaml is sha1 checked.
+
+        This test targets the following:
+
+        * `Pulp #4351 <https://pulp.plan.io/issues/4351>`_.
+        """
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_SHA1_FEED_URL},
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+        # Step 1 and 2
+        repo = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
+        repo = self.client.get(repo['_href'], params={'details': True})
+        module_file = self.list_repo_data_files(self.cfg, repo)[0]
+        sha_vals = self.get_sha1_vals_file(self.cfg, module_file)
+        # sha_vals[0] contains the sha1 checksum of the file
+        # sha_vals[1] contains the filepath containing the checked file
+        self.assertIn(sha_vals[0], sha_vals[1])
+
     @staticmethod
     def list_repo_data_files(cfg, repo):
         """Return a list of all the files present inside repodata dir."""
@@ -489,7 +518,7 @@ class CheckModulesYamlTestCase(unittest.TestCase):
             'f',
             '-name',
             '*modules.yaml.gz'
-        )).stdout.splitlines()
+        ), sudo=True).stdout.splitlines()
 
     @staticmethod
     def get_modules_elements_repomd(cfg, distributor):
@@ -502,3 +531,11 @@ class CheckModulesYamlTestCase(unittest.TestCase):
             )
         )
         return repomd_xml.findall(xpath)
+
+    @staticmethod
+    def get_sha1_vals_file(cfg, filepath):
+        """Return a list containing sha1 checksum of the file and the filepath."""
+        return cli.Client(cfg).run((
+            'sha1sum',
+            filepath
+        ), sudo=True).stdout.split()
