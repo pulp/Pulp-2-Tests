@@ -64,7 +64,7 @@ class RepoMDTestCase(unittest.TestCase):
     def test_02_tag(self):
         """Assert the XML tree's root element has the correct tag."""
         xpath = '{' + RPM_NAMESPACES['metadata/repo'] + '}repomd'
-        self.assertEqual(self.root_element.tag, xpath)
+        self.assertEqual(self.root_element.tag, xpath, self.root_element.tag)
 
     @skip_if(bool, 'repo', False)
     def test_02_data_elements(self):
@@ -82,7 +82,7 @@ class RepoMDTestCase(unittest.TestCase):
         # Pulp 2.17 adds support for modularity.
         if self.cfg.pulp_version >= Version('2.17'):
             expected_data_types.add('modules')
-        self.assertEqual(data_types, expected_data_types)
+        self.assertEqual(data_types, expected_data_types, data_types)
 
 
 class FastForwardIntegrityTestCase(unittest.TestCase):
