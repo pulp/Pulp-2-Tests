@@ -7,7 +7,6 @@ import os
 import unittest
 from urllib.parse import urljoin
 
-from packaging.version import Version
 from pulp_smash import api, cli, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import publish_repo, sync_repo
@@ -79,9 +78,6 @@ class RepoMDTestCase(unittest.TestCase):
             'primary',
             'updateinfo',
         }
-        # Pulp 2.17 adds support for modularity.
-        if self.cfg.pulp_version >= Version('2.17'):
-            expected_data_types.add('modules')
         self.assertEqual(data_types, expected_data_types, data_types)
 
 
