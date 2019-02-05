@@ -168,11 +168,10 @@ class SearchContentTestCase(unittest.TestCase):
         sync_repo(cfg, repo)
         repo = api_client.get(repo['_href'], params={'details': True})
 
-        result = cli.Client(cfg).run(
-            'pulp-admin rpm repo content rpm --repo-id {} '
-            '--match name=Cobbler'
-            .format(repo['id']).split()
+        cmd = 'pulp-admin rpm repo content rpm --repo-id {} --match name=Cobbler'.format(
+            repo['id']
         )
+        result = cli.Client(cfg).run(cmd.split(), sudo=True)
         required_fields = ('Recommends:', 'Requires:', 'Provides:')
         for field in required_fields:
             with self.subTest(field=field):
