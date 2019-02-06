@@ -8,6 +8,7 @@ from pulp_smash import api, cli, config, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
 from pulp_smash.pulp2.utils import (
     publish_repo,
+    pulp_admin_login,
     search_units,
     sync_repo,
     upload_import_unit,
@@ -159,6 +160,7 @@ class SearchContentTestCase(unittest.TestCase):
         cfg = config.get_config()
         if cfg.pulp_version < Version('2.17.1'):
             raise unittest.SkipTest('This test requires Pulp 2.17.1 or newer.')
+        pulp_admin_login(cfg)
         api_client = api.Client(cfg, api.json_handler)
         body = gen_repo(
             importer_config={'feed': RPM_RICH_WEAK_FEED_URL},
