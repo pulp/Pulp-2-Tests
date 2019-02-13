@@ -25,6 +25,7 @@ from pulp_2_tests.tests.rpm.api_v2.utils import (
     get_repodata,
     get_xml_content_from_fixture,
 )
+from pulp_2_tests.tests.rpm.utils import check_issue_4405
 
 
 class ManageModularErrataTestCase(unittest.TestCase):
@@ -43,6 +44,8 @@ class ManageModularErrataTestCase(unittest.TestCase):
         cls.cfg = config.get_config()
         if cls.cfg.pulp_version < Version('2.18'):
             raise unittest.SkipTest('This test requires Pulp 2.18 or newer.')
+        if check_issue_4405(cls.cfg):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/4405')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_sync_publish_update_info(self):
