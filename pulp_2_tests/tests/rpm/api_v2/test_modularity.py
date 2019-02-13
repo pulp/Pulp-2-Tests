@@ -32,10 +32,21 @@ from pulp_2_tests.tests.rpm.api_v2.utils import (
     get_repodata_repomd_xml,
 )
 from pulp_2_tests.tests.rpm.utils import (
+    check_issue_4405,
     gen_yum_config_file,
     os_support_modularity,
 )
-from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
+from pulp_2_tests.tests.rpm.utils import set_up_module
+
+
+def setUpModule():  # pylint:disable=invalid-name
+    """Possibly skip the tests in this module.
+
+    Skip tests if `Pulp #4405 <https://pulp.plan.io/issues/4405>`_ affects us.
+    """
+    set_up_module()
+    if check_issue_4405(config.get_config()):
+        raise unittest.SkipTest('https://pulp.plan.io/issues/4405')
 
 
 class ManageModularContentTestCase(unittest.TestCase):
