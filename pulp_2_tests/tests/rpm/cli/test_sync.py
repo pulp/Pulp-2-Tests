@@ -3,10 +3,11 @@
 import random
 import unittest
 
+from packaging.version import Version
 from pulp_smash import cli, config, selectors, utils
 from pulp_smash.pulp2.utils import pulp_admin_login, reset_pulp
 
-from pulp_2_tests.constants import RPM_UNSIGNED_FEED_URL
+from pulp_2_tests.constants import RPM_KICKSTART_FEED_URL, RPM_UNSIGNED_FEED_URL
 from pulp_2_tests.tests.rpm.utils import check_issue_2620, set_up_module
 
 
@@ -89,64 +90,115 @@ class RemovedContentTestCase(_BaseTestCase):
 
 
 class ForceSyncTestCase(_BaseTestCase):
-    """Test whether one can force Pulp to perform a full sync.
+    """Test a forced full sync on Pulp.
 
-    This test case targets `Pulp #1982`_ and `Pulp Smash #353`_. The test
-    procedure is as follows:
+    This test case targets `Pulp #1982`_ , `Pulp #4409`_ and `Pulp Smash #353`_.
+    The test procedure is as follows:
 
     1. Create and sync a repository.
-    2. Remove some number of RPMs from ``/var/lib/pulp/content/units/rpm/``.
+    2. Remove some number of units from ``/var/lib/pulp/content/units/`` sub-directory.
        Verify they are missing.
-    3. Sync the repository. Verify the RPMs are still missing.
-    4. Sync the repository with ``--force-full true``. Verify all RPMs are
+    3. Sync the repository. Verify the units are still missing.
+    4. Sync the repository with ``--force-full true``. Verify all units are
        present.
 
+    This test case has added distribution units and could be expanded to other unit types.
+
     .. _Pulp #1982: https://pulp.plan.io/issues/1982
+    .. _Pulp #4409: https://pulp.plan.io/issues/4409
     .. _Pulp Smash #353: https://github.com/PulpQE/pulp-smash/issues/353
     """
 
-    def test_all(self):
-        """Test whether one can force Pulp to perform a full sync."""
-        cfg = config.get_config()
-        if not selectors.bug_is_fixed(1982, cfg.pulp_version):
-            self.skipTest('https://pulp.plan.io/issues/1982')
+    @classmethod
+    def setUpClass(cls):
+        """Create class-wide config."""
+        cls.cfg = config.get_config()
 
+    def test_rpm_content_units(self):
+        """Test a forced full sync on Pulp.
+
+        Using the tuple to target rpms units
+        and looking for the .rpm extension, respectively.
+        """
+        if not selectors.bug_is_fixed(1982, self.cfg.pulp_version):
+            self.skipTest('https://pulp.plan.io/issues/1982')
+        self._do_test(('rpm', 'rpm'), RPM_UNSIGNED_FEED_URL)
+
+    def test_distribution_content_units(self):
+        """Test a forced full sync on Pulp.
+
+        Using the tuple to target distribution units
+        and looking for the .img extension, respectively.
+
+        The test fixture includes kickstart information as
+        well as the use of a PULP_DISTRIBUTION.xml file to target
+        additional files not listed in ``[.]treeinfo``. In this example,
+        the ``isolinux/`` directory is added which contains additional
+        .img files for the test.
+
+        For more information about distribution units and the test
+        fixture, see `Pulp #4409`_.
+
+        .. _Pulp #4409: https://pulp.plan.io/issues/4409
+        """
+        if self.cfg.pulp_version < Version('2.19'):
+            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
+        self._do_test(('distribution', 'img'), RPM_KICKSTART_FEED_URL)
+
+    def _do_test(self, unit_type, feed):
+        """Test whether one can force Pulp to perform a full sync."""
         # Create and sync a repository.
-        client = cli.Client(cfg)
+        client = cli.Client(self.cfg)
         repo_id = utils.uuid4()
         client.run((
             'pulp-admin', 'rpm', 'repo', 'create', '--repo-id', repo_id,
-            '--feed', RPM_UNSIGNED_FEED_URL,
+            '--feed', feed,
         ))
         self.addCleanup(client.run, (
             'pulp-admin', 'rpm', 'repo', 'delete', '--repo-id', repo_id,
         ))
-        sync_repo(cfg, repo_id)
+        sync_repo(self.cfg, repo_id)
 
-        # Delete a random RPM from the filesystem.
-        rpms = self._list_rpms(cfg)
-        rpm = random.choice(rpms)
+        # Delete a random unit from the filesystem.
+        units = self._list_units(self.cfg, unit_type)
+        unit = random.choice(units)
         cmd = []
-        cmd.extend(('rm', '-rf', rpm))
+        cmd.extend(('rm', '-rf', unit))
         client.run(cmd, sudo=True)
-        with self.subTest(comment='verify the rpm has been removed'):
-            self.assertEqual(len(self._list_rpms(cfg)), len(rpms) - 1, rpm)
+        with self.subTest(comment='verify the unit has been removed'):
+            self.assertEqual(len(self._list_units(self.cfg, unit_type)), len(units) - 1, unit)
 
         # Sync the repository without --force-full.
-        sync_repo(cfg, repo_id)
-        with self.subTest(comment='verify the rpm has not yet been restored'):
-            self.assertEqual(len(self._list_rpms(cfg)), len(rpms) - 1, rpm)
+        sync_repo(self.cfg, repo_id)
+        with self.subTest(comment='verify the unit has not yet been restored'):
+            self.assertEqual(len(self._list_units(self.cfg, unit_type)), len(units) - 1, unit)
 
         # Sync the repository with --force-full.
-        sync_repo(cfg, repo_id, force_sync=True)
-        with self.subTest(comment='verify the rpm has been restored'):
-            self.assertEqual(len(self._list_rpms(cfg)), len(rpms), rpm)
+        sync_repo(self.cfg, repo_id, force_sync=True)
+        with self.subTest(comment='verify the unit has been restored'):
+            self.assertEqual(len(self._list_units(self.cfg, unit_type)), len(units), unit)
 
     @staticmethod
-    def _list_rpms(cfg):
-        """Return a list of RPMs in ``/var/lib/pulp/content/units/rpm/``."""
+    def _list_units(cfg, unit_type):
+        """Return a list of units in ``/var/lib/pulp/content/units/``.
+
+        The unit type can be a number of different types.
+
+        Examples are:
+        * distribution
+        * rpm
+        * modulemd
+        * modulemd_defaults
+
+        This method should be extensible to take any ``unit_type`` and
+        operate as required.
+        """
         return cli.Client(cfg).run((
-            'find', '/var/lib/pulp/content/units/rpm/', '-name', '*.rpm'
+            'find',
+            '/var/lib/pulp/content/units/{}'.format(unit_type[0]),
+            '-type',
+            'f',
+            '-name', '*.{}'.format(unit_type[1])
         )).stdout.splitlines()
 
 
