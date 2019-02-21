@@ -149,6 +149,43 @@ class ManageModularErrataTestCase(unittest.TestCase):
             'collection names not proper'
         )
 
+    def test_search_errata(self):
+        """Test whether ``updateinfo.xml`` has errata with modular information.
+
+        This Test does the following:
+
+        1. Create and Sync a repo with ``RPM_WITH_MODULES_FEED_URL``.
+        2. Check whether ``updateinfo.xml`` has an errata with modules.
+        3. Check whether search api returns modular content.
+
+        This test case targets:
+
+        * `Pulp #4112 <https://pulp.plan.io/issues/4112>`_.
+        """
+        # Step 1
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+        repo = self.client.post(REPOSITORY_PATH, body)
+        sync_repo(self.cfg, repo)
+        self.addCleanup(self.client.delete, repo['_href'])
+        repo = self.client.get(repo['_href'], params={'details': True})
+        # Step 2
+        update_info_file = get_repodata(
+            self.cfg,
+            repo['distributors'][0],
+            'updateinfo'
+        )
+        self.assertTrue(update_info_file.findall('.//module'))
+        modular_units = search_units(
+            self.cfg, repo, {
+                'filters': {'unit': {'is_modular': True}},
+                'type_ids': ['rpm'],
+            }
+        )
+        self.assertTrue([module for module in modular_units if module['repo_id'] == repo['id']])
+
     def test_copy_errata(self):
         """Test whether Errata modules are copied.
 
