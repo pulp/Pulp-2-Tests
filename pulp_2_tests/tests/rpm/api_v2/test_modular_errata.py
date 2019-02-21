@@ -19,13 +19,14 @@ from pulp_2_tests.constants import (
     MODULE_ERRATA_RPM_DATA,
     MODULE_FIXTURES_ERRATA,
     RPM_MODULAR_OLD_VERSION_URL,
+    RPM_WITH_MODULES_FEED_COUNT,
     RPM_WITH_MODULES_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
     gen_repo,
     get_repodata,
-    get_xml_content_from_fixture,
+    get_xml_content_from_fixture
 )
 from pulp_2_tests.tests.rpm.utils import check_issue_4405
 
@@ -152,6 +153,85 @@ class ManageModularErrataTestCase(unittest.TestCase):
             collections_from_fixtures,
             collection_update_list,
             'collection names not proper'
+        )
+
+    def test_search_errata(self):
+        """Test whether ``updateinfo.xml`` has errata with modular information.
+
+        This test does the following:
+
+        1. Create and sync a repo with ``RPM_WITH_MODULES_FEED_URL``.
+        2. Check whether ``updateinfo.xml`` has an errata with modules.
+        3. Check whether search api returns modular content.
+        3. Check whether search api returns modular erratum content.
+
+        This test case targets:
+
+        * `Pulp #4112 <https://pulp.plan.io/issues/4112>`_.
+        """
+        if self.cfg.pulp_version < Version('2.19'):
+            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
+
+        # Step 1
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+        repo = self.client.post(REPOSITORY_PATH, body)
+        sync_repo(self.cfg, repo)
+        self.addCleanup(self.client.delete, repo['_href'])
+        repo = self.client.get(repo['_href'], params={'details': True})
+        # Step 2
+        update_info_file = get_repodata(
+            self.cfg,
+            repo['distributors'][0],
+            'updateinfo'
+        )
+        modules = [
+            dict(module.items())
+            for module
+            in update_info_file.findall('.//module')
+        ]
+        self.assertEqual(len(modules), RPM_WITH_MODULES_FEED_COUNT, modules)
+        expected_fields = {'stream', 'version', 'arch', 'context', 'name'}
+        self.assertTrue(
+            all([expected_fields == set(module.keys()) for module in modules]),
+            modules
+        )
+        # Step 3
+        modular_units = search_units(
+            self.cfg,
+            repo,
+            {'filters': {'unit': {'is_modular': True}}, 'type_ids': ['rpm']}
+        )
+        self.assertTrue(
+            all(
+                [
+                    module
+                    for module in modular_units
+                    if module['repo_id'] == repo['id']
+                ]
+            ),
+            modular_units
+        )
+        # Step 4
+        erratum_units = search_units(
+            self.cfg,
+            repo,
+            {
+                'filters': {'unit': {'is_modular': True}},
+                'type_ids': ['erratum']
+            }
+        )
+        self.assertTrue(
+            all(
+                [
+                    erratum
+                    for erratum in erratum_units
+                    if erratum['repo_id'] == repo['id']
+                ]
+            ),
+            erratum_units
         )
 
     def test_copy_errata(self):
