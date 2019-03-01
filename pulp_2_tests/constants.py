@@ -684,6 +684,9 @@ RPM_WITH_OLD_VERSION_URL = urljoin(
 )
 """walrus RPM package has 2 versions. The URL to the older version."""
 
+SRPM_DUPLICATE_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'srpm-duplicate/')
+"""The URL to an SRPM repository with duplicate RPMs in repodata."""
+
 SRPM_RICH_WEAK_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'srpm-richnweak-deps/')
 """The URL to an SRPM repository with weak and rich dependencies."""
 
