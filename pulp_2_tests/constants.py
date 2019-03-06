@@ -141,7 +141,7 @@ MODULE_FIXTURES_PACKAGES = {'duck': 3, 'kangaroo': 2, 'walrus': 2}
 MODULE_FIXTURES_ERRATA = MappingProxyType({
     'errata_id': 'RHEA-2012:0059',
     'rpm_count': 2,
-    'total_available_units': 3,
+    'total_available_units': 5,
 })
 """The errata information containing the modular rpm data."""
 
