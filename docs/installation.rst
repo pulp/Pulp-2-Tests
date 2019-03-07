@@ -13,9 +13,10 @@ virtualenv:
     python3 -m venv ~/.venvs/pulp-2-tests
     source ~/.venvs/pulp-2-tests/bin/activate
     pip install --upgrade pip
-    pip install pulp-2-tests
+    pip install git+https://github.com/PulpQE/Pulp-2-Tests.git#egg=pulp-2-tests
     pulp-smash settings create  # declare information about Pulp
-    python3 -m unittest discover pulp_2_tests.tests  # run the tests
+    # Run the tests using unittest or use the test runner of your preference.
+    python3 -m unittest discover pulp_2_tests.tests 
 
 For an explanation of key concepts and more installation strategies, see
 `Installing Python Modules`_. For an explanation of virtualenvs, see `Virtual
