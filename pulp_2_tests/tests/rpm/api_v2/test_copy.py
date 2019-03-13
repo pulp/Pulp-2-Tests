@@ -254,6 +254,7 @@ class CopyConservativeTestCase(unittest.TestCase):
 
     * `Pulp #4152 <https://pulp.plan.io/issues/4152>`_
     * `Pulp #4269 <https://pulp.plan.io/issues/4269>`_
+    * `Pulp #4543 <https://pulp.plan.io/issues/4543>`_
     """
 
     @classmethod
@@ -389,6 +390,45 @@ class CopyConservativeTestCase(unittest.TestCase):
             for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
         ]
         self.assertEqual(len(dst_unit_ids), 1, dst_unit_ids)
+
+    def test_recursive_noconservative_dependency(self):
+        """Recursive, non-conservative, and ``walrus-0.71`` on B.
+
+        Do the following:
+
+        1. Copy ``chimpanzee`` RPM package from repository A to B using:
+           ``recursive`` as True, ``recursive_conservative`` as False, and an
+           older version of walrus package is present on the repo B before
+           the copy.
+        2. Assert that total number of RPM of units copied is equal to ``6``,
+           and the walrus package version is equal to both ``5.21`` and
+           ``0.71``.
+
+        Additional permutation added as ``--recursive`` should ensure
+        the ``latest`` version of the RPM is also copied.
+        """
+        repo = self.copy_units(True, False, True)
+        # Versions of modules expected to be returned
+        expected_versions = ['5.21', '0.71']
+        # Search and return RPM packages after copied on B
+        versions = [
+            unit['metadata']['version']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+            if unit['metadata']['name'] == 'walrus'
+        ]
+        self.assertEqual(len(versions), 2, versions)
+        self.assertEqual(
+            sorted(versions),
+            sorted(expected_versions),
+            versions
+        )
+        dst_unit_ids = [
+            unit['metadata']['name']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
+        # Expect to find one more unit since old and new version of
+        # walrus are now on repo B
+        self.assertEqual(len(dst_unit_ids), 6, dst_unit_ids)
 
     def copy_units(self, recursive, recursive_conservative, old_dependency):
         """Copy units using ``recursive`` and  ``recursive_conservative``."""
