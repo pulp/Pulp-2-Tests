@@ -24,6 +24,7 @@ from pulp_2_tests.constants import (
     RPM_UNSIGNED_FEED_URL,
     RPM_WITH_MODULES_FEED_URL,
     RPM_WITH_MODULES_SHA1_FEED_URL,
+    RPM_WITH_OLD_VERSION_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
@@ -48,9 +49,31 @@ def setUpModule():  # pylint:disable=invalid-name
     if check_issue_4405(config.get_config()):
         raise unittest.SkipTest('https://pulp.plan.io/issues/4405')
 
+def tearDownModule():  # pylint:disable=invalid-name
+    """Delete the orphans created by testing."""
+    cli.Client(config.get_config()).run((
+        'pulp-admin', 'orphan', 'remove', '--all'
+    ))
 
 class ManageModularContentTestCase(unittest.TestCase):
     """Manage modular content tests cases.
+
+    Modules and RPM packages used in this test case::
+
+    Modules:
+    [walrus-0.71]
+    └── walrus-0.71
+    
+    Dependent RPMs of the provided RPM from ``walrus-0.71``
+    walrus-0.71
+    └── whale
+           ├── shark
+           └── stork
+
+    [walrus-5.21]
+    └── walrus-5.21
+
+    The RPM ``walrus-5.21`` has no dependencies.
 
     This test targets the following issue:
 
@@ -65,46 +88,7 @@ class ManageModularContentTestCase(unittest.TestCase):
             raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
-    def test_sync_publish_repo(self):
-        """Test sync and publish modular RPM repository."""
-        repo = self.create_sync_modular_repo()
-        # Assert that `modulemd` and `modulemd_defaults` are present on the
-        # repository.
-        self.assertIsNotNone(repo['content_unit_counts']['modulemd'])
-        self.assertIsNotNone(repo['content_unit_counts']['modulemd_defaults'])
-
-        publish_repo(self.cfg, repo)
-
-        get_repodata(
-            self.cfg,
-            repo['distributors'][0],
-            'modules',
-            api.safe_handler,
-        )
-
-    def test_copy_modulemd_recur(self):
-        """Test copy of modulemd in RPM repository in recursive mode."""
-        criteria = {
-            'filters': {'unit': {
-                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
-                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
-            }},
-            'type_ids': ['modulemd'],
-        }
-        repo = self.copy_content_between_repos(True, criteria)
-        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
-        self.assertEqual(
-            repo['content_unit_counts']['rpm'],
-            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
-            repo['content_unit_counts']['rpm']
-        )
-        self.assertEqual(
-            repo['total_repository_units'],
-            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
-            repo['total_repository_units']
-        )
-
-    def test_copy_modulemd_non_recur(self):
+    def test_copy_modulemd_nonrecursive_nonconservative(self):
         """Test copy of modulemd in RPM repository in non recursive mode."""
         criteria = {
             'filters': {'unit': {
@@ -113,7 +97,7 @@ class ManageModularContentTestCase(unittest.TestCase):
             }},
             'type_ids': ['modulemd'],
         }
-        repo = self.copy_content_between_repos(False, criteria)
+        repo = self.copy_content_between_repos(False, criteria, False)
         self.assertEqual(
             repo['content_unit_counts']['modulemd'],
             1,
@@ -126,13 +110,100 @@ class ManageModularContentTestCase(unittest.TestCase):
         )
         self.assertNotIn('rpm', repo['content_unit_counts'])
 
+    def test_copy_modulemd_recursive_nonconservative(self):
+        """Test copy of modulemd in RPM repository in recursive mode."""
+        criteria = {
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.copy_content_between_repos(True, criteria, False)
+        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
+        self.assertEqual(
+            repo['content_unit_counts']['rpm'],
+            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo['content_unit_counts']['rpm']
+        )
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
+            repo['total_repository_units']
+        )
+
+    def test_copy_modulemd_nonrecursive_conservative(self):
+        """Test copy of modulemd in RPM repository in non recursive mode."""
+        criteria = {
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.copy_content_between_repos(False, criteria, True)
+        self.assertEqual(
+            repo['content_unit_counts']['rpm'],
+            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo['content_unit_counts']['rpm']
+        )
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
+            repo['total_repository_units']
+        )
+
+    def test_copy_modulemd_recursive_conservative(self):
+        """Test copy of modulemd in RPM repository in recursive mode."""
+        criteria = {
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.copy_content_between_repos(True, criteria, True)
+        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
+        self.assertEqual(
+            repo['content_unit_counts']['rpm'],
+            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo['content_unit_counts']['rpm']
+        )
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
+            repo['total_repository_units']
+        )
+
+    def test_copy_modulemd_recursive_nonconservative_dependency(self):
+        """Test copy of modulemd in RPM repository in recursive mode."""
+        criteria = {
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.copy_content_between_repos(True, criteria, False, True)
+        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
+        self.assertEqual(
+            repo['content_unit_counts']['rpm'],
+            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo['content_unit_counts']['rpm']
+        )
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
+            repo['total_repository_units']
+        )
+
     def test_copy_modulemd_defaults(self):
         """Test copy of modulemd_defaults in RPM repository."""
         criteria = {
             'filters': {},
             'type_ids': ['modulemd_defaults'],
         }
-        repo = self.copy_content_between_repos(True, criteria)
+        repo = self.copy_content_between_repos(True, criteria, False)
         self.assertEqual(
             repo['content_unit_counts']['modulemd_defaults'],
             3,
@@ -143,41 +214,6 @@ class ManageModularContentTestCase(unittest.TestCase):
             repo['total_repository_units']
         )
         self.assertNotIn('rpm', repo['content_unit_counts'])
-
-    def create_sync_modular_repo(self):
-        """Create a repo with feed pointing to modular data and sync it.
-
-        :returns: repo data that is created and synced with modular content.
-        """
-        body = gen_repo()
-        body['importer_config']['feed'] = RPM_WITH_MODULES_FEED_URL
-        body['distributors'] = [gen_distributor()]
-        repo = self.client.post(REPOSITORY_PATH, body)
-        self.addCleanup(self.client.delete, repo['_href'])
-        sync_repo(self.cfg, repo)
-        return self.client.get(repo['_href'], params={'details': True})
-
-    def copy_content_between_repos(self, recursive, criteria):
-        """Create two repositories and copy content between them."""
-        # repo1
-        repo1 = self.create_sync_modular_repo()
-
-        # repo2
-        body = gen_repo()
-        repo2 = self.client.post(REPOSITORY_PATH, body)
-        self.addCleanup(self.client.delete, repo2['_href'])
-        repo2 = self.client.get(repo2['_href'], params={'details': True})
-
-        # Copy repo1 to repo2
-        self.client.post(
-            urljoin(repo2['_href'], 'actions/associate/'),
-            {
-                'source_repo_id': repo1['id'],
-                'override_config': {'recursive': recursive},
-                'criteria': criteria
-            }
-        )
-        return self.client.get(repo2['_href'], params={'details': True})
 
     def test_remove_modulemd(self):
         """Test sync and remove modular RPM repository."""
@@ -230,6 +266,72 @@ class ManageModularContentTestCase(unittest.TestCase):
             repo['last_unit_removed'],
             repo['last_unit_removed']
         )
+
+    def test_sync_publish_repo(self):
+        """Test sync and publish modular RPM repository."""
+        repo = self.create_sync_modular_repo()
+        # Assert that `modulemd` and `modulemd_defaults` are present on the
+        # repository.
+        self.assertIsNotNone(repo['content_unit_counts']['modulemd'])
+        self.assertIsNotNone(repo['content_unit_counts']['modulemd_defaults'])
+
+        publish_repo(self.cfg, repo)
+
+        get_repodata(
+            self.cfg,
+            repo['distributors'][0],
+            'modules',
+            api.safe_handler,
+        )
+
+    def copy_content_between_repos(self, recursive, criteria, recursive_conservative, old_dependency=False):
+        """Create two repositories and copy content between them."""
+        # repo1
+        repo1 = self.create_sync_modular_repo()
+
+        # repo2
+        body = gen_repo()
+        repo2 = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo2['_href'])
+        repo2 = self.client.get(repo2['_href'], params={'details': True})
+        # `old_dependency` will import an older version, `0.71` of walrus to
+        # the destiny repostiory.
+        if old_dependency:
+            rpm = utils.http_get(RPM_WITH_OLD_VERSION_URL)
+            upload_import_unit(
+                self.cfg,
+                rpm,
+                {'unit_type_id': 'rpm'}, repo2
+            )
+            units = search_units(self.cfg, repo2, {'type_ids': ['rpm']})
+            self.assertEqual(len(units), 1, units)
+
+        # Copy repo1 to repo2
+        self.client.post(
+            urljoin(repo2['_href'], 'actions/associate/'),
+            {
+                'source_repo_id': repo1['id'],
+                'override_config': {
+                    'recursive': recursive,
+                    'recursive_conservative': recursive_conservative
+                    },
+                'criteria': criteria
+            }
+        )
+        return self.client.get(repo2['_href'], params={'details': True})
+
+    def create_sync_modular_repo(self):
+        """Create a repo with feed pointing to modular data and sync it.
+
+        :returns: repo data that is created and synced with modular content.
+        """
+        body = gen_repo()
+        body['importer_config']['feed'] = RPM_WITH_MODULES_FEED_URL
+        body['distributors'] = [gen_distributor()]
+        repo = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
+        return self.client.get(repo['_href'], params={'details': True})
 
     def remove_module_from_repo(self, repo, criteria):
         """Remove modules from repo."""
