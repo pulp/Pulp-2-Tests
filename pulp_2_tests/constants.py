@@ -139,11 +139,17 @@ MODULE_FIXTURES_PACKAGES = {'duck': 3, 'kangaroo': 2, 'walrus': 2}
 """
 
 MODULE_FIXTURES_ERRATA = MappingProxyType({
+    'errata_count': 1,
     'errata_id': 'RHEA-2012:0059',
+    'modules_count': 2,
     'rpm_count': 2,
     'total_available_units': 5,
 })
-"""The errata information containing the modular rpm data."""
+"""The information about a Modular Errata with RPM artifacts.
+
+:data:`MODULE_FIXTURES_ERRATA['total_available_units']` = ``modules + rpm_count + erratum``
+
+"""
 
 MODULE_ERRATA_RPM_DATA = MappingProxyType({
     'arch': 'x86_64',
@@ -646,6 +652,14 @@ Built from :data:`RPM_UNSIGNED_FEED_URL` and :data:`RPM2`.
 
 RPM_WITH_MODULES_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-modules/')
 """The URL to a modular RPM repository."""
+
+RPM_MODULAR_OLD_VERSION_URL = urljoin(RPM_WITH_MODULES_FEED_URL, 'duck-0.6-1.noarch.rpm')
+"""duck RPM package has 3 versions, the modular errata mentioned the version
+``duck-0.7-1.noarch.rpm``. The URL to the older version."""
+
+RPM_MODULAR_NEW_VERSION_URL = urljoin(RPM_WITH_MODULES_FEED_URL, 'duck-0.8-1.noarch.rpm')
+"""duck RPM package has 3 versions, the modular errata mentioned the version
+``duck-0.7-1.noarch.rpm``. The URL to the newer version."""
 
 RPM_WITH_MODULES_SHA1_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-sha-1-modular/')
 """The URL to a modular RPM repository with SHA1 checksum."""
