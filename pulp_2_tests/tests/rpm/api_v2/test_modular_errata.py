@@ -12,11 +12,13 @@ from pulp_smash.pulp2.utils import (
     search_units,
     sync_repo,
     upload_import_erratum,
+    upload_import_unit,
 )
 
 from pulp_2_tests.constants import (
     MODULE_ERRATA_RPM_DATA,
     MODULE_FIXTURES_ERRATA,
+    RPM_MODULAR_OLD_VERSION_URL,
     RPM_WITH_MODULES_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
@@ -155,7 +157,7 @@ class ManageModularErrataTestCase(unittest.TestCase):
     def test_copy_errata(self):
         """Test whether Errata modules are copied.
 
-        This Test does the following:
+        This test does the following:
 
         1. It creates, syncs, and publishes a modules rpm repository.
         2. Creates another repo with no feed.
@@ -337,3 +339,147 @@ class ManageModularErrataTestCase(unittest.TestCase):
                 'packages': []
             }]
         }
+
+
+class ModularErrataCopyTestCase(unittest.TestCase):
+    """Test ``recursive`` and ``recursive_conservative`` flags during copy.
+
+    This test targets the following issues:
+
+    * `Pulp #4518 <https://pulp.plan.io/issues/4518>`_
+    * `Pulp #4548 <https://pulp.plan.io/issues/4548>`_
+
+    Recursive copy of ``RHEA-2012:0059`` should copy:
+
+    * 2 modules: ``duck`` and ``kangaroo``.
+    * 2 RPMS: ``kangaroo-0.3-1.noarch.rpm``, and ``duck-0.7-1.noarch.rpm``.
+
+    Exercise the use of ``recursive`` and ``recursive_conservative``.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Create class-wide variables."""
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.19'):
+            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
+        cls.client = api.Client(cls.cfg, api.json_handler)
+
+    def test_recursive_noconservative_nodependency(self):
+        """Recursive, non-conservative, and no old dependency."""
+        repo = self.copy_modular_errata(True, False)
+        self.make_assertions_nodependency(repo)
+
+    def test_recursive_conservative_nodepdendency(self):
+        """Recursive, conservative, and no old dependency."""
+        repo = self.copy_modular_errata(True, True)
+        self.make_assertions_nodependency(repo)
+
+    def test_norecursive_conservative_nodepdendency(self):
+        """Non-Recursive, conservative, and no old dependency."""
+        repo = self.copy_modular_errata(False, True)
+        self.make_assertions_nodependency(repo)
+
+    def test_recursive_noconservative_dependency(self):
+        """Recursive, non-conservative, and older version of RPM present."""
+        repo = self.copy_modular_errata(True, False, True)
+        self.make_assertions_dependency(repo)
+
+    def test_norecursive_conservative_dependency(self):
+        """Non-recursive, conservative, and older version of RPM present."""
+        repo = self.copy_modular_errata(False, True, True)
+        self.make_assertions_dependency(repo)
+
+    def make_assertions_dependency(self, repo):
+        """Make assertions over a repo with an older version of RPM present."""
+        versions = sorted([
+            unit['metadata']['version']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+            if unit['metadata']['name'] == 'duck'
+        ])
+
+        # 2 due to the older version already present on the repository.
+        self.assertEqual(len(versions), 2, versions)
+
+        self.assertEqual(
+            repo['content_unit_counts']['erratum'],
+            MODULE_FIXTURES_ERRATA['errata_count'],
+            repo['content_unit_counts']
+        )
+
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd'],
+            MODULE_FIXTURES_ERRATA['modules_count'],
+            repo['content_unit_counts']
+        )
+
+        # older RPM package already present has to be added to total of RPM
+        # packages after copy.
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_ERRATA['total_available_units'] + 1,
+            repo
+        )
+
+    def make_assertions_nodependency(self, repo):
+        """Make assertions over a repo without an older version RPM present."""
+        self.assertEqual(
+            repo['content_unit_counts']['erratum'],
+            MODULE_FIXTURES_ERRATA['errata_count'],
+            repo['content_unit_counts']
+        )
+
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd'],
+            MODULE_FIXTURES_ERRATA['modules_count'],
+            repo['content_unit_counts']
+        )
+
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_ERRATA['total_available_units'],
+            repo
+        )
+
+    def copy_modular_errata(
+            self, recursive, recursive_conservative, old_dependency=False
+    ):
+        """Copy modular errata."""
+        repos = []
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            distributors=[gen_distributor()]
+        )
+        repos.append(self.client.post(REPOSITORY_PATH, body))
+        self.addCleanup(self.client.delete, repos[0]['_href'])
+        sync_repo(self.cfg, repos[0])
+        repos.append(self.client.post(REPOSITORY_PATH, gen_repo()))
+        self.addCleanup(self.client.delete, repos[1]['_href'])
+
+        override_config = {
+            'recursive': recursive,
+            'recursive_conservative': recursive_conservative
+        }
+        if old_dependency:
+            rpm = utils.http_get(RPM_MODULAR_OLD_VERSION_URL)
+            upload_import_unit(
+                self.cfg,
+                rpm,
+                {'unit_type_id': 'rpm'}, repos[1]
+            )
+            units = search_units(self.cfg, repos[1], {'type_ids': ['rpm']})
+            self.assertEqual(len(units), 1, units)
+
+        self.client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
+            'source_repo_id': repos[0]['id'],
+            'override_config': override_config,
+            'criteria': {
+                'filters': {
+                    'unit': {
+                        'id': MODULE_FIXTURES_ERRATA['errata_id']
+                    },
+                },
+                'type_ids': ['erratum'],
+            },
+        },)
+        return self.client.get(repos[1]['_href'], params={'details': True})
