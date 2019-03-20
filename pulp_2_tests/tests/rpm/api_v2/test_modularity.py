@@ -24,6 +24,7 @@ from pulp_2_tests.constants import (
     RPM_UNSIGNED_FEED_URL,
     RPM_WITH_MODULES_FEED_URL,
     RPM_WITH_MODULES_SHA1_FEED_URL,
+    RPM_WITH_OLD_VERSION_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_distributor,
@@ -47,6 +48,13 @@ def setUpModule():  # pylint:disable=invalid-name
     set_up_module()
     if check_issue_4405(config.get_config()):
         raise unittest.SkipTest('https://pulp.plan.io/issues/4405')
+
+
+def tearDownModule():  # pylint:disable=invalid-name
+    """Delete the orphans created by testing."""
+    cli.Client(config.get_config()).run((
+        'pulp-admin', 'orphan', 'remove', '--all'
+    ))
 
 
 class ManageModularContentTestCase(unittest.TestCase):
@@ -159,9 +167,29 @@ class ManageModularContentTestCase(unittest.TestCase):
 class CopyModulesTestCase(unittest.TestCase):
     """Test copy of modules, and its artifacts.
 
-    This test targets the following issue:
+    Modules and RPM packages used in this test case are them
+    following.
 
-    `Pulp Smash #1122 <https://github.com/PulpQE/pulp-smash/issues/1122>`_
+    Modules::
+
+        [walrus-0.71]
+        └── walrus-0.71
+        [walrus-5.21]
+        └── walrus-5.21
+
+    Dependent RPMs of the provided RPM from ``walrus-0.71``::
+
+        walrus-0.71
+        └── whale
+               ├── shark
+               └── stork
+
+    The RPM ``walrus-5.21`` has no dependencies.
+
+    This test targets the following issues:
+
+    * `Pulp Smash #1122 <https://github.com/PulpQE/pulp-smash/issues/1122>`_
+    * `Pulp #4543 <https://pulp.plan.io/issues/4543>`_
     """
 
     @classmethod
@@ -172,8 +200,137 @@ class CopyModulesTestCase(unittest.TestCase):
             raise unittest.SkipTest('This test requires Pulp 2.17 or newer.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
-    def test_copy_modulemd_recur(self):
-        """Test copy of modulemd in RPM repository in recursive mode."""
+    def test_copy_modulemd_defaults(self):
+        """Test copy of modulemd_defaults in RPM repository.
+
+        By default, this type should only copy the default
+        profiles in this repository.
+
+        Without any additional filters, those three modules are:
+
+        - [duck]
+        - [kangaroo]
+        - [walrus]
+
+        """
+        criteria = {
+            'filters': {},
+            'type_ids': ['modulemd_defaults'],
+        }
+        # Copies the 3 default profiles for duck, kangaroo, and walrus
+        repo = self.copy_units(False, False, criteria)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            MODULE_FIXTURES_PACKAGE_STREAM['module_defaults'],
+            repo['content_unit_counts'])
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['module_defaults'],
+            repo['total_repository_units']
+        )
+        self.assertNotIn('rpm', repo['content_unit_counts'])
+
+    def test_copy_modulemd_defaults_recursive(self):
+        """Test copy of modulemd_defaults in RPM repository.
+
+        With the addition of ``override_config``, the
+        ``module_defaults`` should still only be copied.
+
+        No RPMs should be copied and behavior should remain
+        the same.
+
+        Without any additional filters, those three modules are:
+
+        - [duck]
+        - [kangaroo]
+        - [walrus]
+
+        """
+        criteria = {
+            'filters': {},
+            'type_ids': ['modulemd_defaults'],
+        }
+        # Copies the 3 default profiles for duck, kangaroo, and walrus
+        repo = self.copy_units(True, False, criteria)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            MODULE_FIXTURES_PACKAGE_STREAM['module_defaults'],
+            repo['content_unit_counts'])
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['module_defaults'],
+            repo['total_repository_units']
+        )
+        self.assertNotIn('rpm', repo['content_unit_counts'])
+
+    def test_copy_modulemd_defaults_conservative(self):
+        """Test copy of modulemd_defaults in RPM repository.
+
+        With the addition of ``override_config``, the
+        ``module_defaults`` should still only be copied.
+
+        No RPMs should be copied and behavior should remain
+        the same.
+
+        Without any additional filters, those three modules are:
+
+        - [duck]
+        - [kangaroo]
+        - [walrus]
+
+        """
+        criteria = {
+            'filters': {},
+            'type_ids': ['modulemd_defaults'],
+        }
+        # Copies the 3 default profiles for duck, kangaroo, and walrus
+        repo = self.copy_units(False, True, criteria)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            MODULE_FIXTURES_PACKAGE_STREAM['module_defaults'],
+            repo['content_unit_counts'])
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['module_defaults'],
+            repo['total_repository_units']
+        )
+        self.assertNotIn('rpm', repo['content_unit_counts'])
+
+    def test_copy_modulemd_defaults_recursive_conservative(self):
+        """Test copy of modulemd_defaults in RPM repository.
+
+        With the addition of ``override_config``, the
+        ``module_defaults`` should still only be copied.
+
+        No RPMs should be copied and behavior should remain
+        the same.
+
+        Without any additional filters, those three modules are:
+
+        - [duck]
+        - [kangaroo]
+        - [walrus]
+
+        """
+        criteria = {
+            'filters': {},
+            'type_ids': ['modulemd_defaults'],
+        }
+        # Copies the 3 default profiles for duck, kangaroo, and walrus
+        repo = self.copy_units(True, True, criteria)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            MODULE_FIXTURES_PACKAGE_STREAM['module_defaults'],
+            repo['content_unit_counts'])
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['module_defaults'],
+            repo['total_repository_units']
+        )
+        self.assertNotIn('rpm', repo['content_unit_counts'])
+
+    def test_copy_modulemd_recursive_nonconservative(self):
+        """Test modular copy using override_config and old RPMs."""
         criteria = {
             'filters': {'unit': {
                 'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
@@ -181,7 +338,49 @@ class CopyModulesTestCase(unittest.TestCase):
             }},
             'type_ids': ['modulemd'],
         }
-        repo = self.copy_units(True, criteria)
+        repo = self.copy_units(True, False, criteria)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd'],
+            1,
+            repo['content_unit_counts']['modulemd']
+        )
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
+            repo['total_repository_units']
+        )
+
+    def test_copy_modulemd_recursive_nonconservative_dependency(self):
+        """Test modular copy using override_config and old RPMs."""
+        criteria = {
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.copy_units(True, False, criteria, True)
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd'],
+            1,
+            repo['content_unit_counts']['modulemd']
+        )
+        self.assertEqual(
+            repo['total_repository_units'],
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
+            repo['total_repository_units']
+        )
+
+    def test_copy_modulemd_recursive_conservative(self):
+        """Test modular copy using override_config and old RPMs."""
+        criteria = {
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
+            'type_ids': ['modulemd'],
+        }
+        repo = self.copy_units(True, True, criteria)
         self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
         self.assertEqual(
             repo['content_unit_counts']['rpm'],
@@ -194,8 +393,8 @@ class CopyModulesTestCase(unittest.TestCase):
             repo['total_repository_units']
         )
 
-    def test_copy_modulemd_non_recur(self):
-        """Test copy of modulemd in RPM repository in non recursive mode."""
+    def test_copy_modulemd_nonrecursive_conservative_dependency(self):
+        """Test modular copy using override_config and old RPMs."""
         criteria = {
             'filters': {'unit': {
                 'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
@@ -203,38 +402,42 @@ class CopyModulesTestCase(unittest.TestCase):
             }},
             'type_ids': ['modulemd'],
         }
-        repo = self.copy_units(False, criteria)
+        repo = self.copy_units(False, True, criteria, True)
+        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
         self.assertEqual(
-            repo['content_unit_counts']['modulemd'],
-            1,
-            repo['content_unit_counts']['modulemd']
+            repo['content_unit_counts']['rpm'],
+            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo['content_unit_counts']['rpm']
         )
         self.assertEqual(
             repo['total_repository_units'],
-            1,
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
             repo['total_repository_units']
         )
-        self.assertNotIn('rpm', repo['content_unit_counts'])
 
-    def test_copy_modulemd_defaults(self):
-        """Test copy of modulemd_defaults in RPM repository."""
+    def test_copy_modulemd_recursive_conservative_depenency(self):
+        """Test modular copy using override_config and old RPMs."""
         criteria = {
-            'filters': {},
-            'type_ids': ['modulemd_defaults'],
+            'filters': {'unit': {
+                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+            }},
+            'type_ids': ['modulemd'],
         }
-        repo = self.copy_units(True, criteria)
+        repo = self.copy_units(True, True, criteria, True)
+        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
         self.assertEqual(
-            repo['content_unit_counts']['modulemd_defaults'],
-            3,
-            repo['content_unit_counts'])
+            repo['content_unit_counts']['rpm'],
+            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
+            repo['content_unit_counts']['rpm']
+        )
         self.assertEqual(
             repo['total_repository_units'],
-            3,
+            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
             repo['total_repository_units']
         )
-        self.assertNotIn('rpm', repo['content_unit_counts'])
 
-    def copy_units(self, recursive, criteria):
+    def copy_units(self, recursive, recursive_conservative, criteria, old_dependency=False):
         """Create two repositories and copy content between them."""
         repos = []
         body = gen_repo(
@@ -246,10 +449,23 @@ class CopyModulesTestCase(unittest.TestCase):
         sync_repo(self.cfg, repos[0])
         repos.append(self.client.post(REPOSITORY_PATH, gen_repo()))
         self.addCleanup(self.client.delete, repos[1]['_href'])
+        # Add `old_dependency` for OLD RPM on B
+        if old_dependency:
+            rpm = utils.http_get(RPM_WITH_OLD_VERSION_URL)
+            upload_import_unit(
+                self.cfg,
+                rpm,
+                {'unit_type_id': 'rpm'}, repos[1]
+            )
+            units = search_units(self.cfg, repos[1], {'type_ids': ['rpm']})
+            self.assertEqual(len(units), 1, units)
 
         self.client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
             'source_repo_id': repos[0]['id'],
-            'override_config': {'recursive': recursive},
+            'override_config': {
+                'recursive': recursive,
+                'recursive_conservative': recursive_conservative,
+            },
             'criteria': criteria
         })
         return self.client.get(repos[1]['_href'], params={'details': True})
