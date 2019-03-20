@@ -175,6 +175,7 @@ MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType({
     'new_stream': '5.21',
     'rpm_count': 4,
     'total_available_units': 5,
+    'module_defaults': 3,
 })
 """The name and the stream of the package listed in `modules.yaml`_.
 
