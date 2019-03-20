@@ -223,6 +223,8 @@ class CopyRecursiveUnitsTestCase(unittest.TestCase):
 
         See :meth:`do_test`."
         """
+        if self.cfg.pulp_version < Version('2.18.1'):
+            raise unittest.SkipTest('This test requires Pulp 2.18.1 or newer.')
         repo = self.do_test(True, True)
         dst_unit_ids = [
             unit['metadata']['name'] for unit in
