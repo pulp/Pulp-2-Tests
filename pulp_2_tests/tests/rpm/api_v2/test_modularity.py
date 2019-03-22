@@ -22,6 +22,7 @@ from pulp_2_tests.constants import (
     RPM_NAMESPACES,
     RPM_UNSIGNED_FEED_COUNT,
     RPM_UNSIGNED_FEED_URL,
+    RPM_WITH_MODULES_FEED_COUNT,
     RPM_WITH_MODULES_FEED_URL,
     RPM_WITH_MODULES_SHA1_FEED_URL,
     RPM_WITH_OLD_VERSION_URL,
@@ -72,16 +73,72 @@ class ManageModularContentTestCase(unittest.TestCase):
             api.safe_handler,
         )
 
-    def create_sync_modular_repo(self):
+    def test_sync_and_republish_repo(self):
+        """Test sync and re-publish modular RPM repository.
+
+        This test targets the following issue:
+
+        `Pulp #4477 <https://pulp.plan.io/issues/4477>`_
+
+        Steps:
+
+        1. Create a repo pointing to modular feed and sync it.
+        2. Get the number of modules present in the repo updateinfo file.
+        3. Delete the repo.
+        4. Recreate the repo with a different name and sync it.
+        5. Get the number of modules present in the repo updateinfo file.
+        6. Assert that the number of modules has not increased.
+        """
+        if self.cfg.pulp_version < Version('2.19'):
+            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
+
+        # Step 1
+        repo1 = self.create_sync_modular_repo(cleanup=False)
+        publish_repo(self.cfg, repo1)
+        # Step 2
+        update_info_file1 = get_repodata(
+            self.cfg,
+            repo1['distributors'][0],
+            'updateinfo'
+        )
+        first_repo_modules = update_info_file1.findall('.//module')
+        self.assertEqual(
+            len(first_repo_modules),
+            RPM_WITH_MODULES_FEED_COUNT,
+            first_repo_modules
+        )
+        # Step 3
+        self.client.delete(repo1['_href'])
+        # Step 4
+        repo2 = self.create_sync_modular_repo()
+        publish_repo(self.cfg, repo2)
+        # Step 5
+        update_info_file2 = get_repodata(
+            self.cfg,
+            repo2['distributors'][0],
+            'updateinfo'
+        )
+        second_repo_modules = update_info_file2.findall('.//module')
+        self.assertEqual(
+            len(second_repo_modules),
+            RPM_WITH_MODULES_FEED_COUNT,
+            second_repo_modules
+        )
+        # step 6
+        self.assertEqual(len(first_repo_modules), len(second_repo_modules))
+
+    def create_sync_modular_repo(self, cleanup=True):
         """Create a repo with feed pointing to modular data and sync it.
 
         :returns: repo data that is created and synced with modular content.
         """
-        body = gen_repo()
-        body['importer_config']['feed'] = RPM_WITH_MODULES_FEED_URL
-        body['distributors'] = [gen_distributor()]
+        body = gen_repo(
+            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            distributors=[gen_distributor()]
+        )
         repo = self.client.post(REPOSITORY_PATH, body)
-        self.addCleanup(self.client.delete, repo['_href'])
+        if cleanup:
+            self.addCleanup(self.client.delete, repo['_href'])
         sync_repo(self.cfg, repo)
         return self.client.get(repo['_href'], params={'details': True})
 
