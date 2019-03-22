@@ -650,6 +650,9 @@ RPM2_UNSIGNED_URL = urljoin(RPM_UNSIGNED_FEED_URL, RPM2)
 Built from :data:`RPM_UNSIGNED_FEED_URL` and :data:`RPM2`.
 """
 
+RPM_WITH_MODULES_FEED_COUNT = 3
+"""The number of modules available at :data:`RPM_WITH_MODULES_FEED_URL`."""
+
 RPM_WITH_MODULES_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-modules/')
 """The URL to a modular RPM repository."""
 
