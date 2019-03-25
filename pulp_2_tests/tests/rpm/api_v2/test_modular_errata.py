@@ -234,52 +234,6 @@ class ManageModularErrataTestCase(unittest.TestCase):
             erratum_units
         )
 
-    def test_copy_errata(self):
-        """Test whether Errata modules are copied.
-
-        This test does the following:
-
-        1. It creates, syncs, and publishes a modules rpm repository.
-        2. Creates another repo with no feed.
-        3. Recursively copies an errata from one repo to another.
-        4. Checks whether the errata information in the new repo is
-           correct.
-        """
-        repo_1, _ = self._set_repo_and_get_repo_data()
-
-        # Creating an empty repo2
-        body = gen_repo(distributors=[gen_distributor(auto_publish=True)])
-        repo_2 = self.client.post(REPOSITORY_PATH, body)
-        self.addCleanup(self.client.delete, repo_2['_href'])
-
-        criteria = {
-            'filters': {
-                'unit': {
-                    'id': MODULE_FIXTURES_ERRATA['errata_id']
-                }},
-            'type_ids': ['erratum']
-        }
-
-        # Copy errata data recursively from repo1 to repo2
-        self.client.post(urljoin(repo_2['_href'], 'actions/associate/'), {
-            'source_repo_id': repo_1['id'],
-            'override_config': {'recursive': True},
-            'criteria': criteria
-        })
-        repo_2 = self.client.get(repo_2['_href'], params={'details': True})
-
-        self.assertEqual(
-            repo_2['total_repository_units'],
-            MODULE_FIXTURES_ERRATA['total_available_units'],
-            repo_2
-        )
-
-        self.assertEqual(
-            search_units(self.cfg, repo_1, criteria)[0]['metadata']['pkglist'],
-            search_units(self.cfg, repo_2, criteria)[0]['metadata']['pkglist'],
-            'Copied erratum doesn''t contain the same module/rpms'
-        )
-
     def test_upload_errata(self):
         """Upload errata and check whether it got published in the repo.
 
