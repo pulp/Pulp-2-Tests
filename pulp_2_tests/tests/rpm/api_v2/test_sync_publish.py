@@ -15,7 +15,7 @@ from threading import Thread
 from urllib.parse import urljoin
 
 from packaging.version import Version
-from pulp_smash import api, config, exceptions, selectors, utils
+from pulp_smash import api, config, exceptions, utils
 from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import publish_repo, sync_repo
 from requests.exceptions import HTTPError
@@ -371,7 +371,7 @@ class SyncInParallelTestCase(unittest.TestCase):
 class ErrorReportTestCase(unittest.TestCase):
     """Test whether an error report contains sufficient information."""
 
-    def test_all(self):
+    def test_invalid_feed_error_message(self):
         """Test whether an error report contains sufficient information.
 
         Do the following:
@@ -388,29 +388,72 @@ class ErrorReportTestCase(unittest.TestCase):
         .. _Pulp #1455: https://pulp.plan.io/issues/1455
         .. _Pulp Smash #525: https://github.com/PulpQE/pulp-smash/issues/525
         """
+        task = self.run_task(gen_repo(importer_config={'feed': utils.uuid4()}))
+
+        with self.subTest(comment='check task error description'):
+            tokens = ['scheme', 'must', 'be', 'http', 'https', 'file']
+            self.assertTrue(
+                all(
+                    [
+                        token
+                        in task['error']['description'].lower()
+                        for token in tokens
+                    ]
+                )
+            )
+
+    def test_missing_filelists_error_message(self):
+        """Test whether an error report contains sufficient information.
+
+        Do the following:
+
+        1. Create and sync a repository using a missing filelist feed URL.
+        2. Get a reference to the task containing error information.
+        3. Assert that:
+
+           * The error description is sufficiently verbose. See `Pulp #4262`_
+           * The traceback is non-null. See `Pulp #1455`_.
+
+        .. _Pulp #4262: https://pulp.plan.io/issues/4262
+        """
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.19'):
+            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
+
+        repo_body = gen_repo(
+            importer_config={'feed': RPM_MISSING_FILELISTS_FEED_URL}
+        )
+        task = self.run_task(repo_body)
+
+        with self.subTest(comment='check task error description'):
+            tokens = ['error', 'metadata', 'not', 'found']
+            self.assertTrue(
+                all(
+                    [
+                        token
+                        in task['error']['description'].lower()
+                        for token in tokens
+                    ]
+                )
+            )
+
+    def run_task(self, repo_body):
+        """Implement the logic described by each of the ``test*`` methods."""
         cfg = config.get_config()
         client = api.Client(cfg, api.json_handler)
-        body = gen_repo()
-        body['importer_config']['feed'] = utils.uuid4()
-        repo = client.post(REPOSITORY_PATH, body)
+        repo = client.post(REPOSITORY_PATH, repo_body)
         self.addCleanup(client.delete, repo['_href'])
         repo = client.get(repo['_href'], params={'details': True})
 
         with self.assertRaises(exceptions.TaskReportError) as context:
             sync_repo(cfg, repo)
+
         task = context.exception.task
 
-        with self.subTest(comment='check task error description'):
-            if not selectors.bug_is_fixed(1376, cfg.pulp_version):
-                self.skipTest('https://pulp.plan.io/issues/1376')
-            self.assertNotEqual(
-                'Unsupported scheme: ',
-                task['error']['description']
-            )
         with self.subTest(comment='check task traceback'):
-            if not selectors.bug_is_fixed(1455, cfg.pulp_version):
-                self.skipTest('https://pulp.plan.io/issues/1455')
             self.assertIsNotNone(task['traceback'], task)
+
+        return task
 
 
 class NonExistentRepoTestCase(unittest.TestCase):
