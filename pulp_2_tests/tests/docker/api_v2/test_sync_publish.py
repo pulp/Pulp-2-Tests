@@ -1,12 +1,17 @@
 # coding=utf-8
 """Tests for syncing and publishing docker repositories."""
+import random
 import unittest
 
 from jsonschema import validate
 from packaging.version import Version
 from pulp_smash import api, cli, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
-from pulp_smash.pulp2.utils import publish_repo, sync_repo
+from pulp_smash.pulp2.utils import (
+    publish_repo,
+    search_units,
+    sync_repo,
+)
 
 from pulp_2_tests.constants import DOCKER_V1_FEED_URL, DOCKER_V2_FEED_URL
 from pulp_2_tests.tests.docker.api_v2.utils import (
@@ -615,3 +620,71 @@ class RepoRegistryIdTestCase(SyncPublishMixin, unittest.TestCase):
         repos = client.get('/crane/repositories/v2')
         self.assertIn(repo_registry_id, repos.keys())
         self.assertFalse(repos[repo_registry_id]['protected'])
+
+
+class DockerHeadersTestCase(SyncPublishMixin, unittest.TestCase):
+    """Synced docker v2 repo has correctly populated Content-Type field.
+
+    This test targets the following issue:
+
+    `Pulp #4535 <https://pulp.plan.io/issues/4535>`_
+
+    Sync and publish a docker repo and ensures the ``Content-Type`` field is
+    accurately populated.
+
+    Steps involved:
+
+        1. Create, sync and publish a docker repository.
+        2. Get all tags from the docker repo.
+        3. Choose a random tag and get the header information from that tag.
+        4. Get the ``Content-Type`` field and verify accurate.
+
+    """
+
+    def test_validate_content_type(self):
+        """Validates content_type contains correct content."""
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.19'):
+            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
+
+        # Create, sync and publish docker repo
+        repo = self.create_sync_publish_repo(cfg, {
+            'enable_v1': False,
+            'enable_v2': True,
+            'feed': DOCKER_V2_FEED_URL,
+            'upstream_name': get_upstream_name(cfg),
+        })
+
+        # Get all tags from docker repo
+        # Chose a random tag to check
+        random_tag = random.choice(search_units(
+            cfg,
+            repo,
+            {'type_ids': ['docker_tag']},
+        ))
+
+        # Get the Header URL of the random tag
+        url = '/pulp/docker/v2/{}/manifests/1/{}'.format(
+            repo['display_name'],
+            random_tag['metadata']['name'],
+        )
+
+        # Get the Content-Type of that tag
+        header = api.Client(cfg, api.code_handler).get(url).headers
+
+        # Verify the header
+        # application/vnd.docker.distribution.manifest.v1+prettyjws
+        self.assertTrue(
+            all(
+                [
+                    strings in header['Content-Type']
+                    for strings in [
+                        'application',
+                        'vnd.docker',
+                        'distribution',
+                        'manifest',
+                    ]
+                ]
+            ),
+            header['Content-Type']
+        )
