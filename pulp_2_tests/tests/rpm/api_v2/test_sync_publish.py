@@ -10,14 +10,23 @@ For information on repository sync and publish operations, see
     http://docs.pulpproject.org/en/latest/dev-guide/integration/rest-api/repo/sync.html
 """
 import inspect
+import os
 import unittest
 from threading import Thread
 from urllib.parse import urljoin
 
 from packaging.version import Version
-from pulp_smash import api, config, exceptions, utils
-from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
-from pulp_smash.pulp2.utils import publish_repo, sync_repo
+from pulp_smash import api, cli, config, exceptions, utils
+from pulp_smash.pulp2.constants import (
+    ORPHANS_PATH,
+    REPOSITORY_PATH,
+)
+from pulp_smash.pulp2.utils import (
+    publish_repo,
+    search_units,
+    sync_repo,
+)
+
 from requests.exceptions import HTTPError
 
 from pulp_2_tests.constants import (
@@ -36,6 +45,8 @@ from pulp_2_tests.constants import (
     RPM_UNSIGNED_FEED_COUNT,
     RPM_UNSIGNED_FEED_URL,
     RPM_UNSIGNED_URL,
+    RPM_ZCHUNK_FEED_COUNT,
+    RPM_ZCHUNK_FEED_URL,
     SRPM_SIGNED_FEED_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
@@ -44,7 +55,10 @@ from pulp_2_tests.tests.rpm.api_v2.utils import (
     get_repodata_repomd_xml,
     get_unit,
 )
-from pulp_2_tests.tests.rpm.utils import check_issue_3104
+from pulp_2_tests.tests.rpm.utils import (
+    check_issue_3104,
+    check_issue_4529,
+)
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
 
@@ -524,4 +538,77 @@ class SyncSha512RPMPackageTestCase(unittest.TestCase):
             repo['content_unit_counts']['rpm'],
             RPM_UNSIGNED_FEED_COUNT,
             repo['content_unit_counts']['rpm'],
+        )
+
+
+class SyncZchunkRepoSkipTestCase(unittest.TestCase):
+    """Sync feed with ``zchunks`` and ensure no ``zchunk`` units exist.
+
+    A new compression type for repodata exists in Fedora 30 called
+    ``zchunks``. These can be created with patches made to
+    ``createrepo_c --zck``.
+
+    Pulp 2 will ignore this repodata archive type to preserve the quality of
+    the existing data. At the time of writing this test, ``zchunk`` data is
+    in addition to standard repodata. There are currently no cases of
+    repodata only containing ``zchunk`` archives.
+
+    For the scope of this test, units are checked in the published location.
+    This prevents finding duplicate units from other repositories outside the
+    scope of the test while still testing the logic the units were not
+    synced.
+
+    This test targets the following issues:
+
+    `Pulp #4529 <https://pulp.plan.io/issues/4529>`_
+    `Pulp #4530 <https://pulp.plan.io/issues/4530>`_
+
+    Steps:
+
+    1. Create a repo point to a ``zchunk`` feed. Synch and publish the repo.
+    2. Assert no published with the ``.zck`` extension.
+    3. Assert all other units with the repo exist.
+
+    """
+
+    def test_zchunk_sync(self):
+        """Sync a repo and verify Pulp 2 does not sync ``.zck`` data."""
+        cfg = config.get_config()
+        if check_issue_4529(cfg):
+            self.skipTest('https://pulp.plan.io/issues/4529')
+        client = api.Client(cfg, api.json_handler)
+
+        # Sync Repo
+        # Publish to ensure search path is constant
+        body = gen_repo(
+            importer_config={'feed': RPM_ZCHUNK_FEED_URL},
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+        repo = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo['_href'])
+        sync_repo(cfg, repo)
+
+        # Check there are no search_units found of .zck
+        self.assertFalse(
+            cli.Client(cfg).run((
+                'find',
+                os.path.join(
+                    '/var/lib/pulp/published/yum/master/yum_distributor/',
+                    repo['id']
+                ),
+                '-type',
+                'f',
+                '-name',
+                '*.zck'
+            )).stdout.splitlines())
+
+        # Verify other content units were copied
+        copied_unit_ids = [
+            unit['metadata']['name']
+            for unit in search_units(cfg, repo, {'type_ids': ['rpm']})
+        ]
+        self.assertEqual(
+            len(copied_unit_ids),
+            RPM_ZCHUNK_FEED_COUNT,
+            copied_unit_ids
         )
