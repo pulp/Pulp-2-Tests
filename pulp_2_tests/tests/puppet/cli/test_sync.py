@@ -15,7 +15,7 @@ def setUpModule():  # pylint:disable=invalid-name
     See `Pulp #2574 <https://pulp.plan.io/issues/2574>`_.
     """
     set_up_module()
-    if not selectors.bug_is_fixed(2574, config.get_config()):
+    if not selectors.bug_is_fixed(2574, config.get_config().pulp_version):
         raise unittest.SkipTest('https://pulp.plan.io/issues/2574')
 
 
