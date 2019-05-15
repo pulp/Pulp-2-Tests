@@ -359,8 +359,8 @@ class PulpManifestTestCase(BaseAPITestCase):
         # eval. Having this as a Python object helps inspecting the message
         description = json.loads(
             task['error']['description']
-            .replace('u\'', '\'')
-            .replace('\'', '"')
+            .replace('u\'', '\'')  # noqa
+            .replace('\'', '"')  # noqa
         )
         for info in description:
             with self.subTest(name=info['name']):

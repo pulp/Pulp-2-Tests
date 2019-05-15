@@ -153,7 +153,7 @@ class SyncRpmRepoTestCase(SyncRepoBaseTestCase):
             self.assertEqual(len(tasks), 1)
         for count_type in ('added_count', 'removed_count', 'updated_count'):
             with self.subTest(comment=count_type):
-                self.assertEqual(tasks[0]['result'][count_type], 0)
+                self.assertEqual(tasks[0]['result'][count_type], 0, tasks)
 
 
 class SyncDrpmRepoTestCase(SyncRepoBaseTestCase):
