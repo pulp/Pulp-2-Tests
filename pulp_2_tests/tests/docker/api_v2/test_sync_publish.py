@@ -378,7 +378,7 @@ class V2RegistryTestCase(SyncPublishMixin, unittest.TestCase):
         client.request_kwargs['url'] = self.adjust_url(
             client.request_kwargs['url']
         )
-        self.assertIn('fsLayers', response, 'The blob data doesn\'t exist')
+        self.assertIn('fsLayers', response, 'The blob data does not exist')
         for blob in response['fsLayers']:
             with self.subTest(blob=blob):
                 response = client.get(
