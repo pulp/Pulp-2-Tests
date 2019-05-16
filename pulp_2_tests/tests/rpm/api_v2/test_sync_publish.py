@@ -45,6 +45,7 @@ from pulp_2_tests.constants import (
     RPM_UNSIGNED_FEED_COUNT,
     RPM_UNSIGNED_FEED_URL,
     RPM_UNSIGNED_URL,
+    RPM_YUM_METADATA_FILE,
     RPM_ZCHUNK_FEED_COUNT,
     RPM_ZCHUNK_FEED_URL,
     SRPM_SIGNED_FEED_URL,
@@ -612,3 +613,72 @@ class SyncZchunkRepoSkipTestCase(unittest.TestCase):
             RPM_ZCHUNK_FEED_COUNT,
             copied_unit_ids
         )
+
+
+class YumMetadataSymlinkTesCase(unittest.TestCase):
+    """Yum metadata symlink test case.
+
+    This test targets the following issues:
+
+    * `Pulp #4560 <https://pulp.plan.io/issues/4560>`_
+    * `Pulp #4632 <https://pulp.plan.io/issues/4632>`_
+
+    It does the following:
+
+    1. Sync and publish a repository with yum metadata.
+    2. Verify that the published yum metadata - productid, is not a symlink.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Create class-wide variable."""
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.19.1'):
+            raise unittest.SkipTest(
+                'This test requires Pulp 2.19.1 or newer.'
+            )
+
+    def test_broken_simlinks(self):
+        """Test broken symlinks."""
+        client = api.Client(self.cfg, api.json_handler)
+        body = gen_repo(
+            importer_config={'feed': RPM_YUM_METADATA_FILE},
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+        repo = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
+        repo = client.get(repo['_href'], params={'details': True})
+
+        # Assert that there is a yum_repo_metadata file present in the repo.
+        self.assertEqual(
+            repo['content_unit_counts']['yum_repo_metadata_file'],
+            1,
+            repo
+        )
+
+        path = os.path.join(
+            '/var/lib/pulp/published/yum/https/repos/',
+            repo['distributors'][0]['config']['relative_url'],
+            'repodata'
+        )
+
+        # Assert that the productid was not saved as symlink
+        productid_symlink = self.find_productid(True, path)
+        self.assertEqual(len(productid_symlink), 0, productid_symlink)
+
+        # Assert that the productid was saved as a file
+        productid_file = self.find_productid(False, path)
+        self.assertEqual(len(productid_file), 1, productid_symlink)
+
+    def find_productid(self, verify_simlink, path):
+        """Find productid given a path."""
+        cli_client = cli.Client(self.cfg)
+        if verify_simlink is True:
+            cmd = 'find {} -type l -name *productid*'.format(path)
+        else:
+            cmd = 'find {} -type f -name *productid*'.format(path)
+        return cli_client.run(
+            cmd.split(),
+            sudo=True
+        ).stdout.splitlines()
