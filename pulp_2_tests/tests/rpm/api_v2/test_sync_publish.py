@@ -600,7 +600,7 @@ class SyncZchunkRepoSkipTestCase(unittest.TestCase):
                 'f',
                 '-name',
                 '*.zck'
-            )).stdout.splitlines())
+            ), sudo=True).stdout.splitlines())
 
         # Verify other content units were copied
         copied_unit_ids = [
