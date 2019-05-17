@@ -56,16 +56,18 @@ import time
 import unittest
 from urllib.parse import urljoin, urlparse
 
-from requests.exceptions import HTTPError
+from packaging.version import Version
 from pulp_smash import api, cli, config, selectors, utils
 from pulp_smash.pulp2.constants import ORPHANS_PATH, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import publish_repo, sync_repo, upload_import_unit
+from requests.exceptions import HTTPError
 
 from pulp_2_tests.constants import (
     RPM2_UNSIGNED_URL,
     RPM_SIGNED_FEED_COUNT,
     RPM_SIGNED_FEED_URL,
     RPM_UNSIGNED_URL,
+    RPM_YUM_METADATA_FILE,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     DisableSELinuxMixin,
@@ -128,7 +130,7 @@ class _RsyncDistUtilsMixin():  # pylint:disable=too-few-public-methods
     library is a parent class.
     """
 
-    def make_repo(self, cfg, dist_cfg_updates):
+    def make_repo(self, cfg, dist_cfg_updates, feed_url=None):
         """Create a repository with an importer and pair of distributors.
 
         Create an RPM repository with:
@@ -144,11 +146,15 @@ class _RsyncDistUtilsMixin():  # pylint:disable=too-few-public-methods
         :param dist_cfg_updates: A dict to be merged into the RPM rsync
             distributor's ``distributor_config`` dict. At a minimum, this
             argument should have a value of ``{'remote': {…}}``.
+        :param feed_url: The feed URL where the repository will pull the
+            content.
         :returns: A detailed dict of information about the repo.
         """
+        if feed_url is None:
+            feed_url = RPM_SIGNED_FEED_URL
         api_client = api.Client(cfg, api.json_handler)
         body = gen_repo()
-        body['importer_config']['feed'] = RPM_SIGNED_FEED_URL
+        body['importer_config']['feed'] = feed_url
         body['distributors'] = [gen_distributor()]
         body['distributors'].append({
             'distributor_id': utils.uuid4(),
@@ -824,3 +830,78 @@ class RsyncExtraArgsTestCase(
             'override_config': {'force_full': True},
         })
         self.verify_remote_units_path(cfg, distribs['rpm_rsync_distributor'])
+
+
+class SymlinkTestCase(
+        _RsyncDistUtilsMixin,
+        DisableSELinuxMixin,
+        TemporaryUserMixin,
+        unittest.TestCase):
+    """Yum metadata symlink test case.
+
+    Do the following:
+
+    1. Create a repository with a yum distributor and RPM rsync distributor.
+    2. Publish with the yum distributor.
+    3. Publish with the RPM rsync distributor.
+    4. Assert that rsync yum metadata present on repodata is not a symlink.
+
+    This test targets the following issues:
+
+    * `Pulp #4550 <https://pulp.plan.io/issues/4550>`_.
+    * `Pulp #4727 <https://pulp.plan.io/issues/4727>`_.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Create class-wide variable."""
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.19.1'):
+            raise unittest.SkipTest(
+                'This test requires Pulp 2.19.1 or newer'
+            )
+
+    def test_broken_symlinks(self):
+        """Assert that the rsync yum metadata is not a symlink."""
+        # Create a user and repo with an importer and distribs. Sync the repo.
+        ssh_user, priv_key = self.make_user(self.cfg)
+        ssh_identity_file = self.write_private_key(self.cfg, priv_key)
+        repo = self.make_repo(self.cfg, {'remote': {
+            'host': urlparse(self.cfg.get_base_url()).hostname,
+            'root': '/home/' + ssh_user,
+            'ssh_identity_file': ssh_identity_file,
+            'ssh_user': ssh_user,
+        }}, RPM_YUM_METADATA_FILE)
+        sync_repo(self.cfg, repo)
+
+        # Publish the repo with the yum and rsync distributors, respectively.
+        # Verify that the RPM rsync distributor has placed files.
+        distribs = get_dists_by_type_id(self.cfg, repo)
+        self.maybe_disable_selinux(self.cfg, 2199)
+        for type_id in ('yum_distributor', 'rpm_rsync_distributor'):
+            publish_repo(self.cfg, repo, {'id': distribs[type_id]['id']})
+        path = os.path.join(
+            distribs['rpm_rsync_distributor']['config']['remote']['root'],
+            distribs['yum_distributor']['config']['relative_url'],
+            'repodata'
+        )
+
+        # Assert that the productid was not saved as symlink
+        productid_symlink = self.find_productid(True, path)
+        self.assertEqual(len(productid_symlink), 0, productid_symlink)
+
+        # Assert that the productid was saved as a file
+        productid_file = self.find_productid(False, path)
+        self.assertEqual(len(productid_file), 1, productid_file)
+
+    def find_productid(self, verify_simlink, path):
+        """Find productid given a path."""
+        cli_client = cli.Client(self.cfg)
+        if verify_simlink is True:
+            cmd = 'find {} -type l -name *productid*'.format(path)
+        else:
+            cmd = 'find {} -type f -name *productid*'.format(path)
+        return cli_client.run(
+            cmd.split(),
+            sudo=True
+        ).stdout.splitlines()
