@@ -35,6 +35,7 @@ from pulp_2_tests.constants import (
     RPM_ERRATUM_COUNT,
     RPM_INCOMPLETE_FILELISTS_FEED_URL,
     RPM_INCOMPLETE_OTHER_FEED_URL,
+    RPM_KICKSTART_FEED_URL,
     RPM_MISSING_FILELISTS_FEED_URL,
     RPM_MISSING_OTHER_FEED_URL,
     RPM_MISSING_PRIMARY_FEED_URL,
@@ -682,3 +683,100 @@ class YumMetadataSymlinkTesCase(unittest.TestCase):
             cmd.split(),
             sudo=True
         ).stdout.splitlines()
+
+
+class PulpStreamerDecodeTestCase(unittest.TestCase):
+    """Test pulp_streamer stream decodes responses.
+
+    This test targets the following issue:
+
+    `Pulp #4603 <https://pulp.plan.io/issues/4603>`_
+
+    The problem occurs only for content that can be compressed with gzip.
+    Nectar, the download library inside pulp workers, advertises that it can
+    receive content compressed using gzip. When the worker asks the web server
+    for one of the distribution files, the web server responds with the files
+    compressed using gzip. The worker uses nectar to decode the file and then
+    writes it to disk. The same nectar code is used in the streamer. When
+    the streamer is passing along the file, it is passing it along in the
+    decoded form. When the worker gets this data during the
+    ``deferred_download`` task or the ``download`` task, it is attempting to
+    decompress it, but the streamer had already done that.
+
+    Verify that the content being published is compressed.
+
+    Steps:
+
+    1. Create, sync and publish a repo ``on_demand`` using a kickstart
+       directory containing a compressed file like ``vmlinuz``.
+    2. Create a temporary directory where the compressed file will be
+       downloaded.
+    3. Run ``curl`` to download the ``vmlinuz`` file with gzip encoding.
+    4. Verify return code failures from ``curl``.
+    5. Run ``gunzip`` on the downloaded file.
+    6. Verify no stdout, stderr, or return code failures from ``gunzip``.
+    """
+
+    def test_pulp_streamer_encoding(self):
+        """Test pulp_streamer stream decodes responses."""
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.19.1'):
+            raise unittest.SkipTest(
+                'This test requires Pulp 2.19.1 or newer.'
+            )
+
+        # Create, sync and publish a repository.
+        client = api.Client(cfg, api.json_handler)
+
+        body = gen_repo(
+            importer_config={
+                'feed': RPM_KICKSTART_FEED_URL,
+                'download_policy': 'on_demand'
+            },
+            distributors=[gen_distributor(auto_publish=True)]
+        )
+
+        repo = client.post(REPOSITORY_PATH, body)
+        self.addCleanup(client.delete, repo['_href'])
+
+        repo = client.get(repo['_href'], params={'details': True})
+        sync_repo(cfg, repo)
+
+        # Create temp directory and file and download compressed file
+        cli_client = cli.Client(cfg, cli.echo_handler)
+        tempdir = cli_client.run(('mktemp', '-d')).stdout.strip()
+        self.addCleanup(cli_client.run, ('rm', '-Rf', tempdir), sudo=True)
+
+        # Distributor local path
+        path = urljoin(
+            cfg.get_base_url(),
+            'pulp/repos/{0}/images/pxeboot/vmlinuz'.format(
+                repo['distributors'][0]['config']['relative_url']
+            )
+        )
+
+        # Download a compressed file to check for compression
+        process = cli_client.run(
+            (
+                'curl',
+                '-o',
+                os.path.join(tempdir, 'test.gz'),
+                '-sH',
+                'Accept-encoding: gzip',
+                '-k',
+                '-L',
+                path
+            )
+        )
+
+        for stream in (process.stdout, process.stderr):
+            self.assertEqual(len(stream), 0, process)
+
+        # Run gzip test.
+        # Note: This action removes the .gz extension
+        response = cli_client.run(
+            ('gunzip', os.path.join(tempdir, 'test.gz'))
+        )
+
+        for stream in (response.stdout, response.stderr):
+            self.assertEqual(len(stream), 0, response)
