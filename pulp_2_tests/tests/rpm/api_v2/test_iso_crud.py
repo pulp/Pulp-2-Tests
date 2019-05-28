@@ -401,7 +401,7 @@ class ISOUpdateTestCase(unittest.TestCase):
            changed.
         """
         cfg = config.get_config()
-        for issue_id in (2773, 3047, 3100, 4857):
+        for issue_id in (2773, 3047, 3100, 4857, 4865):
             if not selectors.bug_is_fixed(issue_id, cfg.pulp_version):
                 self.skipTest('https://pulp.plan.io/issues/' + str(issue_id))
 
