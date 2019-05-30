@@ -769,7 +769,7 @@ class PulpStreamerDecodeTestCase(unittest.TestCase):
             )
         )
 
-        for stream in (process.stdout, process.stderr):
+        for stream in process.stdout:
             self.assertEqual(len(stream), 0, process)
 
         # Run gzip test.
