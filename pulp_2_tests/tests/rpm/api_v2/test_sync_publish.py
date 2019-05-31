@@ -27,6 +27,8 @@ from pulp_smash.pulp2.utils import (
     sync_repo,
 )
 
+import requests
+from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 
 from pulp_2_tests.constants import (
@@ -742,11 +744,6 @@ class PulpStreamerDecodeTestCase(unittest.TestCase):
         repo = client.get(repo['_href'], params={'details': True})
         sync_repo(cfg, repo)
 
-        # Create temp directory and file and download compressed file
-        cli_client = cli.Client(cfg, cli.echo_handler)
-        tempdir = cli_client.run(('mktemp', '-d')).stdout.strip()
-        self.addCleanup(cli_client.run, ('rm', '-Rf', tempdir), sudo=True)
-
         # Distributor local path
         path = urljoin(
             cfg.get_base_url(),
@@ -755,28 +752,17 @@ class PulpStreamerDecodeTestCase(unittest.TestCase):
             )
         )
 
-        # Download a compressed file to check for compression
-        process = cli_client.run(
-            (
-                'curl',
-                '-o',
-                os.path.join(tempdir, 'test.gz'),
-                '-sH',
-                'Accept-encoding: gzip',
-                '-k',
-                '-L',
-                path
-            )
+        response = requests.get(
+            path,
+            auth=HTTPBasicAuth(cfg.pulp_auth[0], cfg.pulp_auth[1]),
+            verify=False,
+            stream=True
         )
 
-        for stream in (process.stdout, process.stderr):
-            self.assertEqual(len(stream), 0, process)
+        response.raise_for_status()
 
-        # Run gzip test.
-        # Note: This action removes the .gz extension
-        response = cli_client.run(
-            ('gunzip', os.path.join(tempdir, 'test.gz'))
+        self.assertEqual(
+            response.headers['content-encoding'],
+            'gzip',
+            response
         )
-
-        for stream in (response.stdout, response.stderr):
-            self.assertEqual(len(stream), 0, response)
