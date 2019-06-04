@@ -16,7 +16,7 @@ from threading import Thread
 from urllib.parse import urljoin
 
 from packaging.version import Version
-from pulp_smash import api, cli, config, exceptions, utils
+from pulp_smash import api, cli, config, exceptions, selectors, utils
 from pulp_smash.pulp2.constants import (
     ORPHANS_PATH,
     REPOSITORY_PATH,
@@ -720,6 +720,11 @@ class PulpStreamerDecodeTestCase(unittest.TestCase):
     def test_pulp_streamer_encoding(self):
         """Test pulp_streamer stream decodes responses."""
         cfg = config.get_config()
+
+        # skipping until curl is refactored out
+        if not selectors.bug_is_fixed(4907, cfg.pulp_version):
+            raise unittest.SkipTest('https://pulp.plan.io/issues/4907')
+
         if cfg.pulp_version < Version('2.19.1'):
             raise unittest.SkipTest(
                 'This test requires Pulp 2.19.1 or newer.'
