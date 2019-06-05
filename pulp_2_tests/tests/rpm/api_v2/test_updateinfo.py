@@ -37,6 +37,7 @@ yum (and, therefore, dnf) allows a ``<collection>`` element to have "name" and
 .. _openSUSE:Standards Rpm Metadata UpdateInfo:
     https://en.opensuse.org/openSUSE:Standards_Rpm_Metadata_UpdateInfo
 """
+import os
 import re
 import unittest
 from urllib.parse import urljoin
@@ -690,6 +691,11 @@ class OpenSuseErrataTestCase(unittest.TestCase):
     def setUpClass(cls):
         """Create class-wide variables."""
         cls.updates_element = None
+
+        if 'JENKINS_HOME' not in os.environ:
+            raise unittest.SkipTest(
+                'Slow test. It should only run on Jenkins'
+            )
 
     def test_01_create_sync_publish(self):
         """Create, sync, and publish an openSUSE repository."""
