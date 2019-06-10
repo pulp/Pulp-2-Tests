@@ -51,12 +51,6 @@ One can get a high-level view of the content in this repository by executing:
     | python -m json.tool
 """
 
-DOCKER_V1_FEED_URL = 'https://index.docker.io'
-"""The URL to a V1 Docker registry.
-
-This URL can be used as the "feed" property of a Pulp Docker registry.
-"""
-
 DOCKER_V2_FEED_URL = 'https://registry-1.docker.io'
 """The URL to a V2 Docker registry.
 

@@ -11,7 +11,7 @@ from pulp_smash.exceptions import TaskReportError
 from pulp_smash.pulp2.constants import CONTENT_UPLOAD_PATH, REPOSITORY_PATH
 from pulp_smash.pulp2.utils import BaseAPITestCase, search_units, sync_repo
 
-from pulp_2_tests.constants import DOCKER_V1_FEED_URL, DOCKER_V2_FEED_URL
+from pulp_2_tests.constants import DOCKER_V2_FEED_URL
 from pulp_2_tests.tests.docker.api_v2.utils import gen_repo
 from pulp_2_tests.tests.docker.utils import get_upstream_name, set_up_module
 
@@ -23,7 +23,7 @@ def setUpModule():  # pylint:disable=invalid-name
         raise unittest.SkipTest('These tests require at least Pulp 2.12.')
 
 
-def create_docker_repo(cfg, upstream_name, use_v1=False):
+def create_docker_repo(cfg, upstream_name):
     """Create a docker repository.
 
     :param cfg: Information about a Pulp
@@ -34,15 +34,9 @@ def create_docker_repo(cfg, upstream_name, use_v1=False):
     :return: Detailed information about the created repository.
     """
     body = gen_repo()
-    if use_v1:
-        body['importer_config'].update({
-            'enable_v1': True,
-            'feed': DOCKER_V1_FEED_URL,
-        })
-    else:
-        body['importer_config'].update({
-            'feed': DOCKER_V2_FEED_URL,
-        })
+    body['importer_config'].update({
+        'feed': DOCKER_V2_FEED_URL,
+    })
     body['importer_config']['upstream_name'] = upstream_name
     client = api.Client(cfg, api.json_handler)
     return client.post(REPOSITORY_PATH, body)

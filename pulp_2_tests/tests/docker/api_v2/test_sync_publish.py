@@ -13,7 +13,7 @@ from pulp_smash.pulp2.utils import (
     sync_repo,
 )
 
-from pulp_2_tests.constants import DOCKER_V1_FEED_URL, DOCKER_V2_FEED_URL
+from pulp_2_tests.constants import DOCKER_V2_FEED_URL
 from pulp_2_tests.tests.docker.api_v2.utils import (
     SyncPublishMixin,
     gen_distributor,
@@ -166,64 +166,6 @@ MANIFEST_LIST_V2 = {
     }
 }
 """A schema for docker manifest lists."""
-
-
-class V1RegistryTestCase(SyncPublishMixin, unittest.TestCase):
-    """Create, sync, publish and interact with a v1 Docker registry."""
-
-    @classmethod
-    def setUpClass(cls):
-        """Create class-wide variables."""
-        super().setUpClass()
-        cls.cfg = config.get_config()
-        if (os_is_f26(cls.cfg) and
-                not selectors.bug_is_fixed(3036, cls.cfg.pulp_version)):
-            raise unittest.SkipTest('https://pulp.plan.io/issues/3036')
-
-    def setUp(self):
-        """Create a docker repository."""
-        self.repo = self.create_sync_publish_repo(self.cfg, {
-            'enable_v1': True,
-            'enable_v2': False,
-            'feed': DOCKER_V1_FEED_URL,
-            'upstream_name': get_upstream_name(self.cfg),
-        })
-
-    @skip_if(bool, 'repo', False)
-    def test_get_crane_repositories(self):
-        """Issue an HTTP GET request to ``/crane/repositories``.
-
-        Assert that the response is as described by `Crane Admin
-        <http://docs.pulpproject.org/plugins/crane/index.html#crane-admin>`_.
-        """
-        repo_id = self.repo['id']
-        repos = self.make_crane_client(self.cfg).get('/crane/repositories')
-        self.assertIn(repo_id, repos.keys())
-        self.verify_v1_repo(repos[repo_id])
-
-    @skip_if(bool, 'repo', False)
-    def test_get_crane_repositories_v1(self):
-        """Issue an HTTP GET request to ``/crane/repositories/v1``.
-
-        Assert that the response is as described by `Crane Admin
-        <http://docs.pulpproject.org/plugins/crane/index.html#crane-admin>`_.
-        """
-        if (self.cfg.pulp_version < Version('2.14') or
-                not selectors.bug_is_fixed(2723, self.cfg.pulp_version)):
-            self.skipTest('https://pulp.plan.io/issues/2723')
-        repo_id = self.repo['id']
-        repos = self.make_crane_client(self.cfg).get('/crane/repositories/v1')
-        self.assertIn(repo_id, repos.keys())
-        self.verify_v1_repo(repos[repo_id])
-
-    def verify_v1_repo(self, repo):
-        """Implement the assertions for the ``test*`` methods."""
-        with self.subTest():
-            self.assertFalse(repo['protected'])
-        with self.subTest():
-            self.assertTrue(repo['image_ids'])
-        with self.subTest():
-            self.assertTrue(repo['tags'])
 
 
 class V2RegistryTestCase(SyncPublishMixin, unittest.TestCase):
