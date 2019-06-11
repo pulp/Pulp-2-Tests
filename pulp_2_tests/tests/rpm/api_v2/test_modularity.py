@@ -41,10 +41,12 @@ from pulp_2_tests.constants import (
     RPM_NAMESPACES,
     RPM_UNSIGNED_FEED_COUNT,
     RPM_UNSIGNED_FEED_URL,
+    RPM_WITH_MODULAR_URL,
     RPM_WITH_MODULES_FEED_COUNT,
     RPM_WITH_MODULES_FEED_URL,
     RPM_WITH_MODULES_SHA1_FEED_URL,
     RPM_WITH_OLD_VERSION_URL,
+    RPM_WITH_VENDOR_URL,
 )
 from pulp_2_tests.tests.rpm.api_v2.utils import (
     gen_consumer,
@@ -134,7 +136,7 @@ Schema now includes modulemd profiles:
 """
 
 
-class CheckIsModularFlagTestCase(unittest.TestCase):
+class CheckIsModularFlagAfterSyncTestCase(unittest.TestCase):
     """Check is_modular flag unit is present after syncing."""
 
     def test_all(self):
@@ -189,6 +191,66 @@ class CheckIsModularFlagTestCase(unittest.TestCase):
             RPM_UNSIGNED_FEED_COUNT - sum(MODULE_FIXTURES_PACKAGES.values()),
             non_modular_units
         )
+
+
+class CheckIsModularFlagAfterRPMUploadTestCase(unittest.TestCase):
+    """Check is_modular flag unit is present after RPM upload."""
+
+    def test_all(self):
+        """Verify whether the is_modular flag is present in rpm units.
+
+        This test does the following:
+
+        1. Upload a modular RPM
+        2. Upload a non-modular RPM
+        3. Filter the modular and non_modular units using
+           :meth:`pulp_smash.pulp2.utils.search_units`
+        4. Check whether the modular and non_modular units returned
+           by this filter is accurate.
+
+        This test case targets:
+
+        * `Pulp #4869 <https://pulp.plan.io/issues/4869>`_.
+        * `Pulp #4930 <https://pulp.plan.io/issues/4930>`_.
+        """
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.20'):
+            raise unittest.SkipTest('This test requires Pulp 2.20 or newer.')
+        if not selectors.bug_is_fixed(4869, cfg.pulp_version):
+            self.skipTest('https://pulp.plan.io/issues/4869')
+
+        # Setup Client and gen_repo
+        client = api.Client(cfg, api.json_handler)
+        repo = client.post(REPOSITORY_PATH, gen_repo())
+        self.addCleanup(client.delete, repo['_href'])
+
+        # RPM Gets
+        modular_rpm = utils.http_get(RPM_WITH_MODULAR_URL)
+        non_modular_rpm = utils.http_get(RPM_WITH_VENDOR_URL)
+
+        # Upload Units
+        upload_import_unit(cfg, modular_rpm, {'unit_type_id': 'rpm'}, repo)
+        upload_import_unit(cfg, non_modular_rpm, {'unit_type_id': 'rpm'}, repo)
+
+        # Find Modular unit counts
+        modular_units = search_units(
+            cfg, repo, {
+                'filters': {'unit': {'is_modular': True}},
+                'type_ids': ['rpm'],
+            }
+        )
+        non_modular_units = search_units(
+            cfg, repo, {
+                'filters': {'unit': {'is_modular': False}},
+                'type_ids': ['rpm'],
+            }
+        )
+
+        # Check the number of modular units returned by `is_modular` as True.
+        self.assertEqual(len(modular_units), 1, modular_units)
+
+        # Check the number of modular units returned by `is_modular` as False.
+        self.assertEqual(len(non_modular_units), 1, non_modular_units)
 
 
 class CheckModulesYamlTestCase(unittest.TestCase):
