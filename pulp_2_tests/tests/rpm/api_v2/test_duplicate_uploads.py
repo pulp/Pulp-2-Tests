@@ -3,13 +3,15 @@
 import hashlib
 import os
 import unittest
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
+
+from packaging.version import Version
 
 from pulp_smash import api, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
-from pulp_smash.pulp2.utils import upload_import_unit
+from pulp_smash.pulp2.utils import search_units, upload_import_unit
 
-from pulp_2_tests.constants import FILE_URL, RPM_UNSIGNED_URL
+from pulp_2_tests.constants import FILE_URL, FILE2_URL, RPM_UNSIGNED_URL
 from pulp_2_tests.tests.rpm.api_v2.utils import gen_repo
 from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:disable=unused-import
 
@@ -86,3 +88,88 @@ class DuplicateUploadsTestCase(unittest.TestCase):
                 'unit_key': unit_key
             }, repo)
             self.assertIsNone(call_report['result'])
+
+
+class DuplicateUploadAndCopyTestCase(unittest.TestCase):
+    """Test same-name content uploads do not duplicate in `PULP_MANIFEST`."""
+
+    def test_upload_copy_manifest(self):
+        """Test same-name content uploads do not duplicate in `PULP_MANIFEST`.
+
+        Steps:
+
+        1. Create two new feed-less iso-repo repositories.
+        2. Upload content and import it into the source repository. Assert
+           the upload and import was successful.
+        3. Copy the content to a target repo. Assert the copy was successful.
+        4. Upload identically named but different content and import it into
+           the source repository. Assert the upload and import was successful.
+        5. Copy the content to the target repo.
+        6. Assert the target manifest only has one entry for the content.
+        """
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.20'):
+            raise unittest.SkipTest('This test requires Pulp 2.20 or newer.')
+        client = api.Client(cfg, api.json_handler)
+
+        # 1. Create two iso-repo
+        repos = []
+        iso = utils.http_get(FILE_URL)
+        unit_key = {
+            'checksum': hashlib.sha256(iso).hexdigest(),
+            'name': os.path.basename(urlsplit(FILE_URL).path),
+            'size': len(iso),
+        }
+        data = {
+            'importer_type_id': 'iso_importer',
+            'notes': {'_repo-type': 'iso-repo'},
+        }
+        repos.append(client.post(REPOSITORY_PATH, gen_repo(**data)))
+        self.addCleanup(client.delete, repos[0]['_href'])
+        repos.append(client.post(REPOSITORY_PATH, gen_repo(**data)))
+        self.addCleanup(client.delete, repos[1]['_href'])
+
+        # 2. Import the units into the source repo and verify
+        call_report = upload_import_unit(cfg, iso, {
+            'unit_type_id': 'iso',
+            'unit_key': unit_key
+        }, repos[0])
+        self.assertIsNone(call_report['result'], call_report)
+
+        # Only one iso unit should exist in the source repo
+        units = search_units(cfg, repos[0], {'type_ids': ['iso']})
+        self.assertEqual(len(units), 1, units)
+
+        # 3. Sync to a target repository.
+        client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
+            'source_repo_id': repos[0]['id'],
+            'override_config': {},
+            'criteria': {'filters': {'unit': {}}, 'type_ids': ['iso']},
+        })
+
+        # Assert that the single ISO was copied.
+        units = search_units(cfg, repos[1], {'type_ids': ['iso']})
+        self.assertEqual(len(units), 1, units)
+
+        # 4. Upload a same-name, but different ISO to the source repo
+        iso2 = utils.http_get(FILE2_URL)
+        unit_key = {
+            'checksum': hashlib.sha256(iso2).hexdigest(),
+            'name': os.path.basename(urlsplit(FILE_URL).path),
+            'size': len(iso2),
+        }
+        call_report = upload_import_unit(cfg, iso2, {
+            'unit_type_id': 'iso',
+            'unit_key': unit_key
+        }, repos[0])
+        self.assertIsNone(call_report['result'])
+
+        # 5. Copy the new iso from the source to target repo
+        client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
+            'source_repo_id': repos[0]['id'],
+            'override_config': {},
+            'criteria': {'filters': {'unit': {}}, 'type_ids': ['iso']},
+        })
+        # Assert the ISO packages was copied and only 1 unit exists.
+        units = search_units(cfg, repos[1], {'type_ids': ['iso']})
+        self.assertEqual(len(units), 1, units)
