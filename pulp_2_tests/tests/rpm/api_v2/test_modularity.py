@@ -36,6 +36,9 @@ from pulp_2_tests.constants import (
     MODULE_FIXTURES_ERRATA,
     MODULE_FIXTURES_PACKAGES,
     MODULE_FIXTURES_PACKAGE_STREAM,
+    MODULE_FIXTURES_DUCK_4_STREAM,
+    MODULE_FIXTURES_DUCK_5_STREAM,
+    MODULE_FIXTURES_DUCK_6_STREAM,
     RPM_DATA,
     RPM_MODULAR_OLD_VERSION_URL,
     RPM_NAMESPACES,
@@ -403,9 +406,22 @@ class CopyModulesTestCase(unittest.TestCase):
 
     * `Pulp Smash #1122 <https://github.com/PulpQE/pulp-smash/issues/1122>`_
     * `Pulp #4543 <https://pulp.plan.io/issues/4543>`_
+    * `Pulp #4995 <https://pulp.plan.io/issues/4995>`_
 
-    Modules and RPM packages used in this test case are the
-    following.
+    Regressions occurred in copying of any RPMs and modules when
+    other repository modules, modular RPMs, and ursine RPMs would "shadow
+    solve" dependencies. The result would be unexpected modules,
+    module streams, "shadow" modular RPMs, and ursine RPMs being copied.
+
+    This test addresses copying modules and verifying the correct count of
+    modules, RPMs and total units copied.
+
+    Addtional abstracted modules with modular and ursine RPMs were added in
+    pulp-fixtures to be tested in Pulp 2.20 to cover these additional cases.
+
+    The following Modules, modular RPMS, and ursine RPMs are used in this
+    test case. Only the explicit counts for each MODULE_FIXTURE
+    should be copied for each.
 
     Modules::
 
@@ -414,6 +430,16 @@ class CopyModulesTestCase(unittest.TestCase):
         [walrus-5.21]
         └── walrus-5.21
 
+        [duck-4]
+        └── duck-0.8
+
+        [duck-5]
+        └── duck-0.8
+
+        [duck-6]
+        └── duck-0.8
+        └── frog-0.1
+
     Dependent RPMs of the provided RPM from ``walrus-0.71``::
 
         walrus-0.71
@@ -421,9 +447,14 @@ class CopyModulesTestCase(unittest.TestCase):
                ├── shark
                └── stork
 
-    The RPM ``walrus-5.21`` has no dependencies.
+    The modular RPM ``walrus-5.21`` has no modular or ursine RPM dependencies.
 
-    Exercise the use of ``recursive`` and ``recursive_conservative``.
+    The moduar RPM ``duck-0.8`` and ``frog-0.1`` has no modular or ursine RPM
+    dependencies.
+
+    Exercise the use of ``recursive`` and ``recursive_conservative`` with a
+    target repo having no rpms or ``old_rpm`` versions for each
+    ``MODULE_FIXTURE``.
     """
 
     @classmethod
@@ -431,62 +462,86 @@ class CopyModulesTestCase(unittest.TestCase):
         """Create class wide variables."""
         cls.cfg = config.get_config()
         if cls.cfg.pulp_version < Version('2.19'):
-            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
+            raise unittest.SkipTest(
+                'This test requires Pulp 2.19 or newer.'
+            )
         if check_issue_4405(cls.cfg):
             raise unittest.SkipTest('https://pulp.plan.io/issues/4405')
         cls.client = api.Client(cls.cfg, api.json_handler)
+        cls.COPY_MODULES_LIST = [MODULE_FIXTURES_PACKAGE_STREAM]
+        if cls.cfg.pulp_version >= Version('2.20'):
+            if not selectors.bug_is_fixed(4962, cls.cfg.pulp_version):
+                raise unittest.SkipTest('https://pulp.plan.io/issues/4962')
+            cls.COPY_MODULES_LIST.append(MODULE_FIXTURES_DUCK_4_STREAM)
+            cls.COPY_MODULES_LIST.append(MODULE_FIXTURES_DUCK_5_STREAM)
+            cls.COPY_MODULES_LIST.append(MODULE_FIXTURES_DUCK_6_STREAM)
 
-    def test_copy_modulemd_recursive_nonconservative(self):
+    def test_copy_modulemd_recursive_nonconservative_no_old_rpm(self):
+        """Test modular copy using override_config and no old RPMs."""
+        for module in self.COPY_MODULES_LIST:
+            with self.subTest(modules=module['name']):
+                repo = self.copy_units(True, False, False, module)
+                self.check_module_rpm_total_units(repo, module)
+
+    def test_copy_modulemd_recursive_nonconservative_old_rpm(self):
         """Test modular copy using override_config and old RPMs."""
-        repo = self.copy_units(True, False)
-        self.check_module_rpm_total_units(repo)
+        for module in self.COPY_MODULES_LIST:
+            with self.subTest(modules=module['name']):
+                repo = self.copy_units(True, False, True, module)
+                self.check_module_rpm_total_units(repo, module)
 
-    def test_copy_modulemd_recursive_nonconservative_dependency(self):
+    def test_copy_modulemd_recursive_conservative_no_old_rpm(self):
+        """Test modular copy using override_config and no old RPMs."""
+        for module in self.COPY_MODULES_LIST:
+            with self.subTest(modules=module['name']):
+                repo = self.copy_units(True, True, False, module)
+                self.check_module_rpm_total_units(repo, module)
+
+    def test_copy_modulemd_nonrecursive_conservative_old_rpm(self):
         """Test modular copy using override_config and old RPMs."""
-        repo = self.copy_units(True, False, True)
-        self.check_module_rpm_total_units(repo)
+        for module in self.COPY_MODULES_LIST:
+            with self.subTest(modules=module['name']):
+                repo = self.copy_units(False, True, True, module)
+                self.check_module_rpm_total_units(repo, module)
 
-    def test_copy_modulemd_recursive_conservative(self):
+    def test_copy_modulemd_recursive_conservative_old_rpm(self):
         """Test modular copy using override_config and old RPMs."""
-        repo = self.copy_units(True, True)
-        self.check_module_rpm_total_units(repo)
+        for module in self.COPY_MODULES_LIST:
+            with self.subTest(modules=module['name']):
+                repo = self.copy_units(True, True, True, module)
+                self.check_module_rpm_total_units(repo, module)
 
-    def test_copy_modulemd_nonrecursive_conservative_dependency(self):
-        """Test modular copy using override_config and old RPMs."""
-        repo = self.copy_units(False, True, True)
-        self.check_module_rpm_total_units(repo)
-
-    def test_copy_modulemd_recursive_conservative_depenency(self):
-        """Test modular copy using override_config and old RPMs."""
-        repo = self.copy_units(True, True, True)
-        self.check_module_rpm_total_units(repo)
-
-    def check_module_rpm_total_units(self, repo):
+    def check_module_rpm_total_units(self, repo, module):
         """Test copy of modulemd in RPM repository."""
-        self.assertEqual(repo['content_unit_counts']['modulemd'], 1)
-        self.assertEqual(
-            repo['content_unit_counts']['rpm'],
-            MODULE_FIXTURES_PACKAGE_STREAM['rpm_count'],
-            repo['content_unit_counts']['rpm']
-        )
-        self.assertEqual(
-            repo['total_repository_units'],
-            MODULE_FIXTURES_PACKAGE_STREAM['total_available_units'],
-            repo['total_repository_units']
-        )
+        # Core verifications (in order):
+        # - Number of modules copied (current design to be 1)
+        # - Modular and Ursine RPMs copied as provided or dependent on the
+        #   module or module's RPM dependencies
+        # - Total units (Module and RPMs) copied
+        checks = [
+            (repo['content_unit_counts']['modulemd'], 1),
+            (repo['content_unit_counts']['rpm'], module['rpm_count']),
+            (repo['total_repository_units'], module['total_available_units']),
+        ]
 
-    def copy_units(self, recursive, recursive_conservative, old_dependency=False):
+        # for loop to give a breakout for any and each individual failures
+        # Allows easier troubleshooting to pin point libsolv problems
+        for check in checks:
+            with self.subTest(check=check):
+                self.assertEqual(check[0], check[1], module)
+
+    def copy_units(self, recursive, recursive_conservative, old_rpm, module):
         """Create two repositories and copy content between them."""
         criteria = {
             'filters': {'unit': {
-                'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
-                'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream']
+                'name': module['name'],
+                'stream': module['stream']
             }},
             'type_ids': ['modulemd'],
         }
         repos = []
         body = gen_repo(
-            importer_config={'feed': RPM_WITH_MODULES_FEED_URL},
+            importer_config={'feed': module['feed']},
             distributors=[gen_distributor()]
         )
         repos.append(self.client.post(REPOSITORY_PATH, body))
@@ -494,15 +549,19 @@ class CopyModulesTestCase(unittest.TestCase):
         sync_repo(self.cfg, repos[0])
         repos.append(self.client.post(REPOSITORY_PATH, gen_repo()))
         self.addCleanup(self.client.delete, repos[1]['_href'])
-        # Add `old_dependency` for OLD RPM on B
-        if old_dependency:
-            rpm = utils.http_get(RPM_WITH_OLD_VERSION_URL)
+        # Add `old_rpm` for OLD RPM on B
+        if old_rpm:
+            rpm = utils.http_get(module['old'])
             upload_import_unit(
-                self.cfg,
-                rpm,
-                {'unit_type_id': 'rpm'}, repos[1]
+                self.cfg, rpm,
+                {'unit_type_id': 'rpm'},
+                repos[1]
             )
-            units = search_units(self.cfg, repos[1], {'type_ids': ['rpm']})
+            units = search_units(
+                self.cfg,
+                repos[1],
+                {'type_ids': ['rpm']}
+            )
             self.assertEqual(len(units), 1, units)
 
         self.client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
