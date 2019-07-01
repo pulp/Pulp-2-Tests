@@ -58,6 +58,7 @@ from pulp_smash.pulp2.utils import (
 from requests.exceptions import HTTPError
 
 from pulp_2_tests.constants import (
+    ERRATA_PACKAGES_UPDATEINFO,
     ERRATA_UPDATE_INFO,
     OPENSUSE_FEED_URL,
     RPM,
@@ -65,6 +66,7 @@ from pulp_2_tests.constants import (
     RPM_ERRATUM_ID,
     RPM_ERRATUM_RPM_NAME,
     RPM_NAMESPACES,
+    RPM_PACKAGES_UPDATEINFO_FEED_URL,
     RPM_PKGLISTS_UPDATEINFO_FEED_URL,
     RPM_SIGNED_FEED_URL,
     RPM_UNSIGNED_FEED_COUNT,
@@ -755,3 +757,73 @@ class OpenSuseErrataTestCase(unittest.TestCase):
         """
         updated = self.updates_element.findall('update/updated')
         self.assertEqual(len(updated), 0, updated)
+
+
+class ErratumMultipleRepositoriesTestCase(unittest.TestCase):
+    """Verify errata packages appearing in more than one repository.
+
+    Verify that Pulp will return the correct 'pkglist' if an erratum exists
+    in multiple repositories and user syncs multiple of these repositories.
+
+    Note: Missing RPMs in erratum pkglist when an erratum appears in multiple
+    repositories caused wrong applicability calculation.
+
+    This test targets the following issues:
+
+    * `Pulp #4880 <https://pulp.plan.io/issues/4880>`_
+    * `Pulp #4952 <https://pulp.plan.io/issues/4952>`_
+    """
+
+    def test_all(self):
+        """Verify errata packages appearing in more than one repository.
+
+        Do the following:
+
+        1. Sync 2 different repositories with same errata name, but different
+           pkglist.
+        2. Search for the errata name.
+        3. Assert that RPMS present in both repositories will be returned if an
+           erratum exists in multiple repositories.
+        """
+        cfg = config.get_config()
+        if cfg.pulp_version < Version('2.20'):
+            raise unittest.SkipTest(
+                'This test requires Pulp 2.20 or newer.'
+            )
+        client = api.Client(cfg, api.json_handler)
+        repos = []
+        urls = [
+            RPM_PACKAGES_UPDATEINFO_FEED_URL,
+            RPM_PKGLISTS_UPDATEINFO_FEED_URL,
+        ]
+        for url in urls:
+            body = gen_repo()
+            body['importer_config']['download_policy'] = 'on_demand'
+            body['importer_config']['feed'] = url
+            body['distributors'] = [gen_distributor()]
+            repos.append(client.post(REPOSITORY_PATH, body))
+            self.addCleanup(client.delete, repos[-1]['_href'])
+            sync_repo(cfg, repos[-1])
+
+        units = search_units(
+            cfg,
+            repos[0],
+            {
+                'type_ids': ['erratum'],
+                'filters': {
+                    'unit': {'id': ERRATA_PACKAGES_UPDATEINFO['errata']}
+                },
+            },
+        )
+
+        package_names = sorted(
+            [
+                package['filename']
+                for package in units[0]['metadata']['pkglist'][0]['packages']
+            ]
+        )
+        self.assertEqual(
+            ERRATA_PACKAGES_UPDATEINFO['packages'],
+            package_names,
+            package_names
+        )
