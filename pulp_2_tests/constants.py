@@ -88,12 +88,14 @@ DRPM_UNSIGNED_URL = urljoin(DRPM_UNSIGNED_FEED_URL, DRPM)
 Built from :data:`DRPM_UNSIGNED_FEED_URL` and :data:`DRPM`.
 """
 
-ERRATA_UPDATE_INFO = MappingProxyType({
-    'updated_date': '2014-07-28 00:00:00 UTC',
-    'old_updated_date': '2013-07-28 00:00:00 UTC',
-    'new_updated_date': '2015-07-28 00:00:00 UTC',
-    'invalid_updated_date': '07-28-2014 00:00:00 UTC',
-})
+ERRATA_UPDATE_INFO = MappingProxyType(
+    {
+        'updated_date': '2014-07-28 00:00:00 UTC',
+        'old_updated_date': '2013-07-28 00:00:00 UTC',
+        'new_updated_date': '2015-07-28 00:00:00 UTC',
+        'invalid_updated_date': '07-28-2014 00:00:00 UTC',
+    }
+)
 """Dates to be used to verify that update errata updates properly."""
 
 FILE_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'file/')
@@ -132,63 +134,87 @@ MODULE_FIXTURES_PACKAGES = {'duck': 3, 'kangaroo': 2, 'walrus': 2}
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
 """
 
-MODULE_FIXTURES_ERRATA = MappingProxyType({
-    'errata_count': 1,
-    'errata_id': 'RHEA-2012:0059',
-    'modules_count': 2,
-    'rpm_count': 2,
-    'total_available_units': 5,
-})
+MODULE_FIXTURES_ERRATA = MappingProxyType(
+    {
+        'errata_count': 1,
+        'errata_id': 'RHEA-2012:0059',
+        'modules_count': 2,
+        'rpm_count': 2,
+        'total_available_units': 5,
+    }
+)
 """The information about a Modular Errata with RPM artifacts.
 
 :data:`MODULE_FIXTURES_ERRATA['total_available_units']` = ``modules + rpm_count + erratum``
 
 """
 
-MODULE_ERRATA_RPM_DATA = MappingProxyType({
-    'arch': 'x86_64',
-    'collection_name': 'collection 0',
-    'context': 'deadbeef',
-    'description': 'Walrus Erratum; metadata-only',
-    'from': 'betelgeuze',
-    'issued': '2002-02-20 00:22:00',
-    'rpm_name': 'walrus',
-    'stream_name': '5.21',
-    'updated': '2018-09-05 11:23:42',
-    'version': '20180704144203',
-})
+MODULE_ERRATA_RPM_DATA = MappingProxyType(
+    {
+        'arch': 'x86_64',
+        'collection_name': 'collection 0',
+        'context': 'deadbeef',
+        'description': 'Walrus Erratum; metadata-only',
+        'from': 'betelgeuze',
+        'issued': '2002-02-20 00:22:00',
+        'rpm_name': 'walrus',
+        'stream_name': '5.21',
+        'updated': '2018-09-05 11:23:42',
+        'version': '20180704144203',
+    }
+)
 """The custom errata information for uploading an errata file."""
 
-MODULE_DATA_2 = MappingProxyType({
-    'arch': 'noarch',
-    'context': 'deadbeef',
-    'description': 'A module for the duck 0.8 package',
-    'name': 'duck',
-    'stream': '0',
-    'version': '201809302113907',
-})
+MODULE_DATA_2 = MappingProxyType(
+    {
+        'arch': 'noarch',
+        'context': 'deadbeef',
+        'description': 'A module for the duck 0.8 package',
+        'name': 'duck',
+        'stream': '0',
+        'version': '201809302113907',
+    }
+)
 """A custom module information."""
 
+MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType(
+    {
+        'name': 'walrus',
+        'stream': '0.71',
+        'new_stream': '5.21',
+        'rpm_count': 4,
+        'total_available_units': 5,
+        'module_defaults': 3,
+    }
+)
+"""The name and the stream of the package listed in `modules.yaml`_.
 
-MODULE_ARTIFACT_RPM_DATA = MappingProxyType({
-    'name': 'walrus',
-    'version': '5.21',
-    'release': '1',
-    'arch': 'noarch',
-    'epoch': '0',
-    'vendor': 'GPLv2',
-    'src': 'http://www.fedoraproject.org'
-})
+.. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
+"""
+
+MODULE_ARTIFACT_RPM_DATA = MappingProxyType(
+    {
+        'name': 'walrus',
+        'version': '5.21',
+        'release': '1',
+        'arch': 'noarch',
+        'epoch': '0',
+        'vendor': 'GPLv2',
+        'src': 'http://www.fedoraproject.org',
+    }
+)
 """Details of the RPM file associated with ``MODULE_ERRATA_RPM_DATA``"""
 
-MODULE_ARTIFACT_RPM_DATA_2 = MappingProxyType({
-    'name': 'duck',
-    'version': '0.6',
-    'release': 'livebeef',
-    'arch': 'noarch',
-    'epoch': '0',
-    'vendor': 'GPLv2'
-})
+MODULE_ARTIFACT_RPM_DATA_2 = MappingProxyType(
+    {
+        'name': 'duck',
+        'version': '0.6',
+        'release': 'livebeef',
+        'arch': 'noarch',
+        'epoch': '0',
+        'vendor': 'GPLv2',
+    }
+)
 """Details of the RPM file associated with ``MODULE_DATA_2``"""
 
 OPENSUSE_FEED_URL = 'https://download.opensuse.org/update/leap/42.3/oss/'
@@ -218,13 +244,13 @@ OSTREE_FEED = urljoin(PULP_FIXTURES_BASE_URL, 'ostree/small/')
 PUPPET_MODULE_1 = {
     'author': 'pulpqe',
     'name': 'dummypuppet',
-    'version': '0.1.0'
+    'version': '0.1.0',
 }
 """Information about a Puppet module available via Pulp Fixtures."""
 
 PUPPET_MODULE_URL_1 = urljoin(
     urljoin(PULP_FIXTURES_BASE_URL, 'puppet/'),
-    '{}-{}.tar.gz'.format(PUPPET_MODULE_1['author'], PUPPET_MODULE_1['name'])
+    '{}-{}.tar.gz'.format(PUPPET_MODULE_1['author'], PUPPET_MODULE_1['name']),
 )
 """The URL to a Puppet module module available via Pulp Fixtures.
 
@@ -257,11 +283,9 @@ PUPPET_FEED_2 = 'https://forge.puppet.com'
 PUPPET_MODULE_2 = {'author': 'puppetlabs', 'name': 'motd'}
 """Information about a Puppet module available at :data:`PUPPET_FEED_2`."""
 
-PUPPET_MODULE_URL_2 = ('{}/v3/files/{}-{}-%s.tar.gz'.format(
-    PUPPET_FEED_2,
-    PUPPET_MODULE_2['author'],
-    PUPPET_MODULE_2['name'],
-))
+PUPPET_MODULE_URL_2 = '{}/v3/files/{}-{}-%s.tar.gz'.format(
+    PUPPET_FEED_2, PUPPET_MODULE_2['author'], PUPPET_MODULE_2['name']
+)
 """The URL to a Puppet module available at :data:`PUPPET_FEED_2`.
 
 A version string should be provided to `-%s.tar.gz` e.g::
@@ -278,22 +302,23 @@ PUPPET_MODULE_EXTRANEOUS_FILE_URL = (
 PUPPET_MODULE_EXTRANEOUS_FILE_DATA = {
     'author': 'marcel',
     'name': 'passenger',
-    'version': '0.5.0'
+    'version': '0.5.0',
 }
 """Information about a Puppet module available at :data:`PUPPET_FEED_2`."""
 
 PUPPET_MODULE_EXTRANEOUS_FILE = urljoin(
-    PUPPET_MODULE_EXTRANEOUS_FILE_URL, '{}-{}-{}.tar.gz'.format(
+    PUPPET_MODULE_EXTRANEOUS_FILE_URL,
+    '{}-{}-{}.tar.gz'.format(
         PUPPET_MODULE_EXTRANEOUS_FILE_DATA['author'],
         PUPPET_MODULE_EXTRANEOUS_FILE_DATA['name'],
-        PUPPET_MODULE_EXTRANEOUS_FILE_DATA['version']
-    )
+        PUPPET_MODULE_EXTRANEOUS_FILE_DATA['version'],
+    ),
 )
 """ A Puppet module containing extraneous files."""
 
-PUPPET_QUERY_2 = quote_plus('-'.join(
-    PUPPET_MODULE_2[key] for key in ('author', 'name')
-))
+PUPPET_QUERY_2 = quote_plus(
+    '-'.join(PUPPET_MODULE_2[key] for key in ('author', 'name'))
+)
 """A query that can be used to search for Puppet modules.
 
 Built from :data:`PUPPET_MODULE_2`.
@@ -321,35 +346,35 @@ PYTHON_PYPI_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'python-pypi/')
 """The URL to the PyPI Python repository."""
 
 PYTHON_EGG_URL = urljoin(
-    PYTHON_PYPI_FEED_URL,
-    'packages/shelf-reader-0.1.tar.gz'
+    PYTHON_PYPI_FEED_URL, 'packages/shelf-reader-0.1.tar.gz'
 )
 """The URL to a Python egg at :data:`PYTHON_PYPI_FEED_URL`."""
 
 PYTHON_WHEEL_URL = urljoin(
-    PYTHON_PYPI_FEED_URL,
-    'packages/shelf_reader-0.1-py2-none-any.whl'
+    PYTHON_PYPI_FEED_URL, 'packages/shelf_reader-0.1-py2-none-any.whl'
 )
 """The URL to a Python egg at :data:`PYTHON_PYPI_FEED_URL`."""
 
-RPM_DATA = MappingProxyType({
-    'name': 'bear',
-    'epoch': '0',
-    'version': '4.1',
-    'release': '1',
-    'arch': 'noarch',
-    'metadata': {
+RPM_DATA = MappingProxyType(
+    {
+        'name': 'bear',
+        'epoch': '0',
+        'version': '4.1',
         'release': '1',
-        'license': 'GPLv2',
-        'description': 'A dummy package of bear',
-        'files': {'dir': [], 'file': ['/tmp/bear.txt']},
-        'group': 'Internet/Applications',
-        'size': {'installed': 43, 'package': 1846},
-        'sourcerpm': 'bear-4.1-1.src.rpm',
-        'summary': 'A dummy package of bear',
-        'vendor': None,
-    },
-})
+        'arch': 'noarch',
+        'metadata': {
+            'release': '1',
+            'license': 'GPLv2',
+            'description': 'A dummy package of bear',
+            'files': {'dir': [], 'file': ['/tmp/bear.txt']},
+            'group': 'Internet/Applications',
+            'size': {'installed': 43, 'package': 1846},
+            'sourcerpm': 'bear-4.1-1.src.rpm',
+            'summary': 'A dummy package of bear',
+            'vendor': None,
+        },
+    }
+)
 """Metadata for an RPM with an associated erratum.
 
 The metadata tags that may be present in an RPM may be printed with:
@@ -391,24 +416,26 @@ RPM = '{}-{}{}-{}.{}.rpm'.format(
 See :data:`pulp_2_tests.constants.RPM_SIGNED_URL`.
 """
 
-RPM2_DATA = MappingProxyType({
-    'name': 'camel',
-    'epoch': '0',
-    'version': '0.1',
-    'release': '1',
-    'arch': 'noarch',
-    'metadata': {
+RPM2_DATA = MappingProxyType(
+    {
+        'name': 'camel',
+        'epoch': '0',
+        'version': '0.1',
         'release': '1',
-        'license': 'GPLv2',
-        'description': 'A dummy package of camel',
-        'files': {'dir': [], 'file': ['/tmp/camel.txt']},
-        'group': 'Internet/Applications',
-        'size': '42',
-        'sourcerpm': 'camel-0.1-1.src.rpm',
-        'summary': 'A dummy package of camel',
-        'vendor': None,
-    },
-})
+        'arch': 'noarch',
+        'metadata': {
+            'release': '1',
+            'license': 'GPLv2',
+            'description': 'A dummy package of camel',
+            'files': {'dir': [], 'file': ['/tmp/camel.txt']},
+            'group': 'Internet/Applications',
+            'size': '42',
+            'sourcerpm': 'camel-0.1-1.src.rpm',
+            'summary': 'A dummy package of camel',
+            'vendor': None,
+        },
+    }
+)
 
 RPM2 = '{}-{}{}-{}.{}.rpm'.format(
     RPM2_DATA['name'],
@@ -431,36 +458,42 @@ RPM2_RICH_DEPENDENCY = ['Scotch', 'contireau', 'icecubes', 'tablespoon-sugar']
 RPM2_WEAK_DEPENDENCY = ['orange-bits']
 """The name weak dependencies associate with :data:`RPM2_RICH_WEAK_DATA`."""
 
-RPM2_RICH_WEAK_TOTAL_DEPENDENCIES = len(RPM2_RICH_DEPENDENCY) + len(RPM2_WEAK_DEPENDENCY)
+RPM2_RICH_WEAK_TOTAL_DEPENDENCIES = len(RPM2_RICH_DEPENDENCY) + len(
+    RPM2_WEAK_DEPENDENCY
+)
 """The total of rich and weak dependencies :data:`RPM2_RICH_WEAK_DATA`."""
 
-RPM2_RICH_WEAK_DATA = MappingProxyType({
-    'name': 'Cobbler',
-    'rich_dependency': len(RPM2_RICH_DEPENDENCY),
-    'weak_dependency': len(RPM2_WEAK_DEPENDENCY),
-    'total_dependencies': RPM2_RICH_WEAK_TOTAL_DEPENDENCIES,
-    'total_installed_packages': RPM2_RICH_WEAK_TOTAL_DEPENDENCIES + 1,
-})
+RPM2_RICH_WEAK_DATA = MappingProxyType(
+    {
+        'name': 'Cobbler',
+        'rich_dependency': len(RPM2_RICH_DEPENDENCY),
+        'weak_dependency': len(RPM2_WEAK_DEPENDENCY),
+        'total_dependencies': RPM2_RICH_WEAK_TOTAL_DEPENDENCIES,
+        'total_installed_packages': RPM2_RICH_WEAK_TOTAL_DEPENDENCIES + 1,
+    }
+)
 """Data for an RPM package with rich/weak dependency."""
 
-RPM_WITH_VENDOR_DATA = MappingProxyType({
-    'name': 'rpm-with-vendor',
-    'epoch': '0',
-    'version': '1',
-    'release': '1.fc25',
-    'arch': 'noarch',
-    'metadata': {
-        'release': '1',
-        'license': 'Public Domain',
-        'description': 'This RPM has a vendor',
-        'files': {'dir': [], 'file': []},
-        'group': None,
-        'size': None,
-        'sourcerpm': None,
-        'summary': None,
-        'vendor': 'Pulp Fixtures',
-    },
-})
+RPM_WITH_VENDOR_DATA = MappingProxyType(
+    {
+        'name': 'rpm-with-vendor',
+        'epoch': '0',
+        'version': '1',
+        'release': '1.fc25',
+        'arch': 'noarch',
+        'metadata': {
+            'release': '1',
+            'license': 'Public Domain',
+            'description': 'This RPM has a vendor',
+            'files': {'dir': [], 'file': []},
+            'group': None,
+            'size': None,
+            'sourcerpm': None,
+            'summary': None,
+            'vendor': 'Pulp Fixtures',
+        },
+    }
+)
 
 RPM_WITH_VENDOR = '{}-{}{}-{}.{}.rpm'.format(
     RPM_WITH_VENDOR_DATA['name'],
@@ -478,14 +511,12 @@ RPM_ALT_LAYOUT_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-alt-layout/')
 """The URL to a signed RPM repository. See :data:`RPM_SIGNED_URL`."""
 
 RPM_INCOMPLETE_FILELISTS_FEED_URL = urljoin(
-    PULP_FIXTURES_BASE_URL,
-    'rpm-incomplete-filelists/',
+    PULP_FIXTURES_BASE_URL, 'rpm-incomplete-filelists/'
 )
 """The URL to a repository with an incomplete ``filelists.xml`` file."""
 
 RPM_INCOMPLETE_OTHER_FEED_URL = urljoin(
-    PULP_FIXTURES_BASE_URL,
-    'rpm-incomplete-other/',
+    PULP_FIXTURES_BASE_URL, 'rpm-incomplete-other/'
 )
 """The URL to a repository with an incomplete ``other.xml`` file."""
 
@@ -537,20 +568,17 @@ RPM_MIRRORLIST_MIXED = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-mirrorlist-mixed')
 """The URL to a mirrorlist file containing invalid and valid entries."""
 
 RPM_MISSING_FILELISTS_FEED_URL = urljoin(
-    PULP_FIXTURES_BASE_URL,
-    'rpm-missing-filelists/',
+    PULP_FIXTURES_BASE_URL, 'rpm-missing-filelists/'
 )
 """A repository that's missing its ``filelists.xml`` file."""
 
 RPM_MISSING_OTHER_FEED_URL = urljoin(
-    PULP_FIXTURES_BASE_URL,
-    'rpm-missing-other/',
+    PULP_FIXTURES_BASE_URL, 'rpm-missing-other/'
 )
 """A repository that's missing its ``other.xml`` file."""
 
 RPM_MISSING_PRIMARY_FEED_URL = urljoin(
-    PULP_FIXTURES_BASE_URL,
-    'rpm-missing-primary/',
+    PULP_FIXTURES_BASE_URL, 'rpm-missing-primary/'
 )
 """A repository that's missing its ``primary.xml`` file."""
 
@@ -582,11 +610,37 @@ metadata/rpm
     Used by ``repodata/repomd.xml``.
 """
 
-RPM_PKGLISTS_UPDATEINFO_FEED_URL = (
-    'https://repos.fedorapeople.org/pulp/pulp/fixtures/'
-    'rpm-pkglists-updateinfo/'
+RPM_PKGLISTS_UPDATEINFO_FEED_URL = urljoin(
+    PULP_FIXTURES_BASE_URL, 'rpm-pkglists-updateinfo/'
 )
 """A repository whose updateinfo file has multiple ``<pkglist>`` sections."""
+
+RPM_PACKAGES_UPDATEINFO_FEED_URL = urljoin(
+    PULP_FIXTURES_BASE_URL, 'rpm-packages-updateinfo/'
+)
+"""A repository whose updateinfo file has multiple ``<pkglist>`` sections.
+
+``<pkglist>`` has different package names than the ones present in
+RPM_PKGLISTS_UPDATEINFO_FEED_URL.
+"""
+
+ERRATA_PACKAGES_UPDATEINFO = {
+    'errata': 'RHEA-2012:0055',
+    'packages': [
+        'dolphin-3.10.232-1.noarch.rpm',
+        'penguin-0.9.1-1.noarch.rpm',
+        'pike-2.2-1.noarch.rpm',
+        'shark-0.1-1.noarch.rpm',
+        'walrus-5.21-1.noarch.rpm',
+        'whale-0.2-1.noarch.rpm',
+    ],
+}
+"""This errata appears in 2 different repositories. List all packages
+mentioned in both repositories.
+
+See::data:`pulp_2_tests.constants.RPM_PKGLISTS_UPDATEINFO_FEED_URL` and
+:data:`pulp_2_tests.constants.RPM_PACKAGES_UPDATEINFO_FEED_URL`.
+"""
 
 RPM_PKG_RICH_WEAK_VERSION = '4.12'
 """The version of the RPM package manager that introduced weak dependencies resolution."""
@@ -622,8 +676,7 @@ RPM_SHA_512_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-sha-512/')
 """The URL to an RPM repository with sha512 checksum."""
 
 RPM_UPDATED_INFO_FEED_URL = urljoin(
-    PULP_FIXTURES_BASE_URL,
-    'rpm-updated-updateinfo/'
+    PULP_FIXTURES_BASE_URL, 'rpm-updated-updateinfo/'
 )
 """A repository whose updateinfo file has an errata section."""
 
@@ -633,7 +686,9 @@ RPM2_UNSIGNED_URL = urljoin(RPM_UNSIGNED_FEED_URL, RPM2)
 Built from :data:`RPM_UNSIGNED_FEED_URL` and :data:`RPM2`.
 """
 
-RPM_WITH_MODULAR_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-modular/')
+RPM_WITH_MODULAR_FEED_URL = urljoin(
+    PULP_FIXTURES_BASE_URL, 'rpm-with-modular/'
+)
 """The URL to a modular RPM repository.
 
 .. NOTE:: This repository is not generated by `pulp-fixtures`_.
@@ -643,57 +698,61 @@ RPM_WITH_MODULAR_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-modular/')
 
 RPM_WITH_MODULAR_URL = urljoin(
     RPM_WITH_MODULAR_FEED_URL,
-    'nodejs-10.15.2-1.module_f30+3181+3be24b3a.x86_64.rpm'
+    'nodejs-10.15.2-1.module_f30+3181+3be24b3a.x86_64.rpm',
 )
 
 RPM_WITH_MODULES_FEED_COUNT = 3
 """The number of modules available at :data:`RPM_WITH_MODULES_FEED_URL`."""
 
-RPM_WITH_MODULES_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-modules/')
+RPM_WITH_MODULES_FEED_URL = urljoin(
+    PULP_FIXTURES_BASE_URL, 'rpm-with-modules/'
+)
 """The URL to a modular RPM repository."""
 
-RPM_MODULAR_OLD_VERSION_URL = urljoin(RPM_WITH_MODULES_FEED_URL, 'duck-0.6-1.noarch.rpm')
+RPM_MODULAR_OLD_VERSION_URL = urljoin(
+    RPM_WITH_MODULES_FEED_URL, 'duck-0.6-1.noarch.rpm'
+)
 """duck RPM package has 3 versions, the modular errata mentioned the version
 ``duck-0.7-1.noarch.rpm``. The URL to the older version."""
 
-RPM_MODULAR_NEW_VERSION_URL = urljoin(RPM_WITH_MODULES_FEED_URL, 'duck-0.8-1.noarch.rpm')
+RPM_MODULAR_NEW_VERSION_URL = urljoin(
+    RPM_WITH_MODULES_FEED_URL, 'duck-0.8-1.noarch.rpm'
+)
 """duck RPM package has 3 versions, the modular errata mentioned the version
 ``duck-0.7-1.noarch.rpm``. The URL to the newer version."""
 
-RPM_WITH_MODULES_SHA1_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-sha-1-modular/')
+RPM_WITH_MODULES_SHA1_FEED_URL = urljoin(
+    PULP_FIXTURES_BASE_URL, 'rpm-with-sha-1-modular/'
+)
 """The URL to a modular RPM repository with SHA1 checksum."""
 
 RPM_WITH_PULP_DISTRIBUTION_FEED_URL = urljoin(
-    PULP_FIXTURES_BASE_URL, 'rpm-with-pulp-distribution/')
+    PULP_FIXTURES_BASE_URL, 'rpm-with-pulp-distribution/'
+)
 """The URL to a RPM repository with a PULP_DISTRIBUTION.xml file."""
 
 RPM_WITH_NON_ASCII_URL = urljoin(
     PULP_FIXTURES_BASE_URL,
-    'rpm-with-non-ascii/rpm-with-non-ascii-1-1.fc25.noarch.rpm'
+    'rpm-with-non-ascii/rpm-with-non-ascii-1-1.fc25.noarch.rpm',
 )
 """The URL to an RPM with non-ascii metadata in its header."""
 
 RPM_WITH_NON_UTF_8_URL = urljoin(
     PULP_FIXTURES_BASE_URL,
-    'rpm-with-non-utf-8/rpm-with-non-utf-8-1-1.fc25.noarch.rpm'
+    'rpm-with-non-utf-8/rpm-with-non-utf-8-1-1.fc25.noarch.rpm',
 )
 """The URL to an RPM with non-UTF-8 metadata in its header."""
 
-RPM_WITH_VENDOR_FEED_URL = urljoin(
-    PULP_FIXTURES_BASE_URL,
-    'rpm-with-vendor/'
-)
+RPM_WITH_VENDOR_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'rpm-with-vendor/')
 """A repository whose primary.xml file has an vendor section."""
 
 RPM_WITH_VENDOR_URL = urljoin(
-    RPM_WITH_VENDOR_FEED_URL,
-    'rpm-with-vendor-1-1.fc25.noarch.rpm'
+    RPM_WITH_VENDOR_FEED_URL, 'rpm-with-vendor-1-1.fc25.noarch.rpm'
 )
 """The URL of an RPM with a specified vendor in its header."""
 
 RPM_WITH_OLD_VERSION_URL = urljoin(
-    RPM_UNSIGNED_FEED_URL,
-    'walrus-0.71-1.noarch.rpm'
+    RPM_UNSIGNED_FEED_URL, 'walrus-0.71-1.noarch.rpm'
 )
 """walrus RPM package has 2 versions. The URL to the older version."""
 
@@ -721,7 +780,9 @@ Pulp2 is not intended to work with these archive types.
 SRPM_DUPLICATE_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'srpm-duplicate/')
 """The URL to an SRPM repository with duplicate RPMs in repodata."""
 
-SRPM_RICH_WEAK_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'srpm-richnweak-deps/')
+SRPM_RICH_WEAK_FEED_URL = urljoin(
+    PULP_FIXTURES_BASE_URL, 'srpm-richnweak-deps/'
+)
 """The URL to an SRPM repository with weak and rich dependencies."""
 
 SRPM = 'test-srpm02-1.0-1.src.rpm'
@@ -751,7 +812,9 @@ SRPM_UNSIGNED_URL = urljoin(SRPM_UNSIGNED_FEED_URL, SRPM)
 Built from :data:`SRPM_UNSIGNED_FEED_URL` and :data:`SRPM`.
 """
 
-PULP_LARGE_RPM_REPO = 'https://repos.fedorapeople.org/pulp/pulp/rpm_large_metadata/'
+PULP_LARGE_RPM_REPO = (
+    'https://repos.fedorapeople.org/pulp/pulp/rpm_large_metadata/'
+)
 """A URL which serves the large RPM files for Pulp.
 
 .. NOTE:: This repository is not generated by `pulp-fixtures`_.
@@ -762,8 +825,7 @@ PULP_LARGE_RPM_REPO = 'https://repos.fedorapeople.org/pulp/pulp/rpm_large_metada
 RPM_LARGE_METADATA = 'nodejs-babel-preset-es2015-6.6.0-2.el6.noarch.rpm'
 """RPM with filelists size more than 9MB and less than 15 MB."""
 
-RPM_LARGE_METADATA_FEED = urljoin(PULP_LARGE_RPM_REPO,
-                                  RPM_LARGE_METADATA)
+RPM_LARGE_METADATA_FEED = urljoin(PULP_LARGE_RPM_REPO, RPM_LARGE_METADATA)
 """Feed URL for ``RPM_LARGE_METADATA``."""
 
 RPM_YUM_METADATA_FILE = 'https://repos.fedorapeople.org/pulp/pulp/demo_repos/test_yum_meta_data_file/'  # pylint:disable=line-too-long
