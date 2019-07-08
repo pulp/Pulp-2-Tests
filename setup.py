@@ -49,7 +49,7 @@ setup(
             'flake8',
             'flake8-docstrings',
             'flake8-quotes',
-            'pydocstyle',
+            'pydocstyle<4.0',
             'pylint',
             # For `make docs-html` and `make docs-clean`
             'sphinx',
