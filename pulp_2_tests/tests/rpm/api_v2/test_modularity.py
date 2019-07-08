@@ -147,9 +147,9 @@ class CheckIsModularFlagAfterSyncTestCase(unittest.TestCase):
 
         This test does the following:
 
-        1. Create and sync a modular repo
+        1. Create and sync a modular repository.
         2. Filter the modular and non_modular units using
-           :meth:`pulp_smash.pulp2.utils.search_units`
+           :meth:`pulp_smash.pulp2.utils.search_units`.
         3. Check whether the modular and non_modular units returned
            by this filter is accurate.
 
@@ -176,12 +176,14 @@ class CheckIsModularFlagAfterSyncTestCase(unittest.TestCase):
                 'type_ids': ['rpm'],
             }
         )
+
         non_modular_units = search_units(
             cfg, repo, {
                 'filters': {'unit': {'is_modular': False}},
                 'type_ids': ['rpm'],
             }
         )
+
         # Check the number of modular units returned by `is_modular` as True.
         self.assertEqual(
             len(modular_units),

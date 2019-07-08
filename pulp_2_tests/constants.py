@@ -128,8 +128,17 @@ FILE2_FEED_URL = urljoin(PULP_FIXTURES_BASE_URL, 'file2/')
 FILE2_URL = urljoin(FILE2_FEED_URL, '1.iso')
 """The URL to an ISO file at :data:`FILE2_FEED_URL`."""
 
-MODULE_FIXTURES_PACKAGES = {'duck': 3, 'kangaroo': 2, 'walrus': 2}
+MODULE_FIXTURES_PACKAGES = {'duck': 3, 'frog': 1, 'kangaroo': 2, 'walrus': 2}
 """The name and the number of the package versions listed in `modules.yaml`_.
+
+    - duck-0.6-1.src.rpm
+    - duck-0.7-1.src.rpm
+    - duck-0.8-1.src.rpm
+    - frog-0.1-1.src.rpm
+    - kangaroo-0.2-1.src.rpm
+    - kangaroo-0.3-1.src.rpm
+    - walrus-0.71-1.src.rpm
+    - walrus-5.21-1.src.rpm
 
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
 """
@@ -757,8 +766,7 @@ RPM_WITH_OLD_VERSION_URL = urljoin(
 """walrus RPM package has 2 versions. The URL to the older version."""
 
 RPM_WITH_OLD_VERSION_DUCK_URL = urljoin(
-    RPM_UNSIGNED_FEED_URL,
-    'duck-0.7-1.noarch.rpm'
+    RPM_UNSIGNED_FEED_URL, 'duck-0.7-1.noarch.rpm'
 )
 """duck RPM package has 4 versions. The URL to an older version."""
 
@@ -837,61 +845,69 @@ RPM_YUM_METADATA_FILE = 'https://repos.fedorapeople.org/pulp/pulp/demo_repos/tes
     https://repos.fedorapeople.org/pulp/pulp/fixtures/
 """
 
-MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType({
-    'name': 'walrus',
-    'stream': '0.71',
-    'new_stream': '5.21',
-    'rpm_count': 4,
-    'total_available_units': 5,
-    'module_defaults': 3,
-    'feed': RPM_WITH_MODULES_FEED_URL,
-    'old': RPM_WITH_OLD_VERSION_URL,
-})
+MODULE_FIXTURES_PACKAGE_STREAM = MappingProxyType(
+    {
+        'name': 'walrus',
+        'stream': '0.71',
+        'new_stream': '5.21',
+        'rpm_count': 4,
+        'total_available_units': 5,
+        'module_defaults': 3,
+        'feed': RPM_WITH_MODULES_FEED_URL,
+        'old': RPM_WITH_OLD_VERSION_URL,
+    }
+)
 """The name and the stream of the package listed in `modules.yaml`_.
 
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
 """
 
-MODULE_FIXTURES_DUCK_4_STREAM = MappingProxyType({
-    'name': 'duck',
-    'stream': '4',
-    'new_stream': '4',
-    'rpm_count': 1,
-    'total_available_units': 2,
-    'module_defaults': 1,
-    'feed': RPM_WITH_MODULES_FEED_URL,
-    'old': RPM_WITH_OLD_VERSION_DUCK_URL,
-})
+MODULE_FIXTURES_DUCK_4_STREAM = MappingProxyType(
+    {
+        'name': 'duck',
+        'stream': '4',
+        'new_stream': '4',
+        'rpm_count': 1,
+        'total_available_units': 2,
+        'module_defaults': 1,
+        'feed': RPM_WITH_MODULES_FEED_URL,
+        'old': RPM_WITH_OLD_VERSION_DUCK_URL,
+    }
+)
 """The name and the stream of the package listed in `modules.yaml`_.
 
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
 """
 
-MODULE_FIXTURES_DUCK_5_STREAM = MappingProxyType({
-    'name': 'duck',
-    'stream': '5',
-    'new_stream': '5',
-    'rpm_count': 1,
-    'total_available_units': 2,
-    'module_defaults': 1,
-    'feed': RPM_WITH_MODULES_FEED_URL,
-    'old': RPM_WITH_OLD_VERSION_DUCK_URL,
-})
+MODULE_FIXTURES_DUCK_5_STREAM = MappingProxyType(
+    {
+        'name': 'duck',
+        'stream': '5',
+        'new_stream': '5',
+        'rpm_count': 1,
+        'total_available_units': 2,
+        'module_defaults': 1,
+        'feed': RPM_WITH_MODULES_FEED_URL,
+        'old': RPM_WITH_OLD_VERSION_DUCK_URL,
+    }
+)
 """The name and the stream of the package listed in `modules.yaml`_.
 
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
 """
 
-MODULE_FIXTURES_DUCK_6_STREAM = MappingProxyType({
-    'name': 'duck',
-    'stream': '6',
-    'new_stream': '6',
-    'rpm_count': 2,
-    'total_available_units': 3,
-    'module_defaults': 1,
-    'feed': RPM_WITH_MODULES_FEED_URL,
-    'old': RPM_WITH_OLD_VERSION_DUCK_URL,
-})
+MODULE_FIXTURES_DUCK_6_STREAM = MappingProxyType(
+    {
+        'name': 'duck',
+        'stream': '6',
+        'new_stream': '6',
+        'rpm_count': 2,
+        'total_available_units': 3,
+        'module_defaults': 1,
+        'feed': RPM_WITH_MODULES_FEED_URL,
+        'old': RPM_WITH_OLD_VERSION_DUCK_URL,
+    }
+)
 """The name and the stream of the package listed in `modules.yaml`_.
 
 .. _modules.yaml: https://github.com/PulpQE/pulp-fixtures/blob/master/rpm/assets/modules.yaml
