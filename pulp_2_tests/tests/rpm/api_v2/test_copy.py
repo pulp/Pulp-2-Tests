@@ -14,6 +14,7 @@ from pulp_smash.pulp2.utils import (
     sync_repo,
     upload_import_unit,
 )
+import pytest
 
 from pulp_2_tests.constants import (
     RPM_NAMESPACES,
@@ -33,6 +34,7 @@ from pulp_2_tests.tests.rpm.utils import set_up_module as setUpModule  # pylint:
 _PATH = '/var/lib/pulp/published/yum/https/repos/'
 
 
+@pytest.mark.recursive_conservative
 class CopyErrataRecursiveTestCase(unittest.TestCase):
     """Test that recursive copy of erratas copies RPM packages."""
 
@@ -145,6 +147,7 @@ class MtimeTestCase(unittest.TestCase):
         self.assertEqual(mtimes_pre, mtimes_post)
 
 
+@pytest.mark.recursive_conservative
 class CopyYumMetadataFileTestCase(unittest.TestCase):
     """Test the copy of metadata units between repos."""
 
@@ -234,6 +237,7 @@ class CopyYumMetadataFileTestCase(unittest.TestCase):
         self.assertGreater(len(yum_meta_data_element), 0)
 
 
+@pytest.mark.recursive_conservative
 class CopyConservativeTestCase(unittest.TestCase):
     """Test ``recursive`` and ``recursive_conservative`` flags during copy.
 

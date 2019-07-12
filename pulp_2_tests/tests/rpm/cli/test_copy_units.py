@@ -4,6 +4,7 @@ import subprocess
 import unittest
 from urllib.parse import urljoin
 
+import pytest
 from packaging.version import Version
 from pulp_smash import cli, config, selectors, utils
 from pulp_smash.pulp2.utils import pulp_admin_login
@@ -114,6 +115,7 @@ class CopyTestCase(UtilsMixin, unittest.TestCase):
         self.assertEqual(len(rpms['chimpanzee']), 1, rpms)
 
 
+@pytest.mark.recursive_conservative
 class CopyRecursiveTestCase(UtilsMixin, unittest.TestCase):
     """Recursively copy a "chimpanzee" unit from one repository to another.
 
