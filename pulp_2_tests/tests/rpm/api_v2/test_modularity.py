@@ -9,6 +9,7 @@ from types import MappingProxyType
 from urllib.parse import urljoin
 from xml.etree import ElementTree
 
+import pytest
 from jsonschema import validate
 from packaging.version import Version
 
@@ -64,6 +65,9 @@ from pulp_2_tests.tests.rpm.utils import (
     gen_yum_config_file,
     os_support_modularity,
 )
+
+pytestmark = pytest.mark.recursive_conservative  # pylint:disable=invalid-name
+
 
 # MappingProxyType is used to make an immutable dict.
 MODULES_METADATA = MappingProxyType({

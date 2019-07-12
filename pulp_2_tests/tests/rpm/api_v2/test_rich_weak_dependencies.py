@@ -3,6 +3,7 @@
 import unittest
 from urllib.parse import urljoin
 
+import pytest
 from packaging.version import Version
 from pulp_smash import api, cli, config, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH
@@ -181,6 +182,7 @@ class SearchContentTestCase(unittest.TestCase):
                 self.assertEqual(result.stdout.count(field), 1, result)
 
 
+@pytest.mark.recursive_conservative
 class CopyRecursiveUnitsTestCase(unittest.TestCase):
     """Test copy units for a repository rich/weak dependencies.
 

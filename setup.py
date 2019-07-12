@@ -42,6 +42,7 @@ setup(
         'packaging',
         'pulp-smash>=1!0.0.1,<1!1',
         'python-dateutil',
+        'pytest==4.1.0',
     ],
     extras_require={
         'dev': [
