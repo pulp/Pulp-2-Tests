@@ -13,6 +13,7 @@ Location: :doc:`/index` → :doc:`/tests`
     tests/pulp_2_tests.tests.docker.api_v2.test_copy
     tests/pulp_2_tests.tests.docker.api_v2.test_crud
     tests/pulp_2_tests.tests.docker.api_v2.test_duplicate_uploads
+    tests/pulp_2_tests.tests.docker.api_v2.test_remove
     tests/pulp_2_tests.tests.docker.api_v2.test_sync
     tests/pulp_2_tests.tests.docker.api_v2.test_sync_publish
     tests/pulp_2_tests.tests.docker.api_v2.test_tags
