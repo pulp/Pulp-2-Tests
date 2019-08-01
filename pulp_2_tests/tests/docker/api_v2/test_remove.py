@@ -12,9 +12,7 @@ from pulp_2_tests.tests.docker.api_v2.utils import gen_repo
 from pulp_2_tests.tests.docker.utils import get_upstream_name
 
 # Dummy Data - Need to datamine a DOCKER repo
-DOCKER_REMOVE = {
-    'INITIAL': {'MANIFEST': 10, 'MANIFEST_LIST': 2, 'BLOB': 8, 'TAG': 13},
-}
+DOCKER_REMOVE = {'INITIAL': {'MANIFEST': 10, 'MANIFEST_LIST': 2, 'BLOB': 8, 'TAG': 13}}
 
 
 class RemoveV2ContentTestCase(unittest.TestCase):
@@ -47,7 +45,7 @@ class RemoveV2ContentTestCase(unittest.TestCase):
 
     def setUp(self):
         """Set variables used by each test case."""
-        self.body = gen_repo(
+        body = gen_repo(
             importer_config={
                 'enable_v1': False,
                 'enable_v2': True,
@@ -55,39 +53,34 @@ class RemoveV2ContentTestCase(unittest.TestCase):
                 'upstream_name': get_upstream_name(self.cfg),
             }
         )
-        self.repo = self.client.post(REPOSITORY_PATH, self.body)
+        self.repo = self.client.post(REPOSITORY_PATH, body)
         self.addCleanup(self.client.delete, self.repo['_href'])
         sync_repo(self.cfg, self.repo)
 
     def get_docker_units(self, repo, unit_type):
-        """Sync docker repo and move tags."""
+        """Return docker units filtered by type."""
         # Get unit counts
-        units = search_units(
-            self.cfg, repo, {
-                'type_ids': [unit_type],
-                'filters': {
-                    'unit': {}
-                },
-            })
-        return units
+        return search_units(
+            self.cfg, repo, {'type_ids': [unit_type], 'filters': {'unit': {}}}
+        )
 
     def delete_docker_units(self, repo, units):
-        """Sync docker repo and move tags."""
+        """Delete docker units."""
         for unit in units:
             criteria = {
                 'type_ids': [
                     'docker_tag',
                     'docker_manifest_list',
                     'docker_manifest',
-                    'docker_blob'
+                    'docker_blob',
                 ],
                 'filters': {'unit': {'_id': unit['unit_id']}},
                 # "filters": {"unit": {"_id": {"$in": units}}}
             }
-            self.client.post(urljoin(repo['_href'], 'actions/unassociate/'), {
-                'source_repo_id': repo['id'],
-                'criteria': criteria,
-            })
+            self.client.post(
+                urljoin(repo['_href'], 'actions/unassociate/'),
+                {'source_repo_id': repo['id'], 'criteria': criteria},
+            )
 
     def test_01_remove_tag_list_all(self):
         """Sync docker repo and remove all tags."""
