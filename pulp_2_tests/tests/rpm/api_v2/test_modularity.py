@@ -1441,6 +1441,7 @@ class ModularErrataCopyTestCase(unittest.TestCase):
     Recursive copy of ``RHEA-2012:0059`` should copy:
 
     * 2 modules: ``duck`` and ``kangaroo``.
+    * 2 modulemd_defaults ``duck`` and ``kangaroo``.
     * 2 RPMS: ``kangaroo-0.3-1.noarch.rpm``, and ``duck-0.7-1.noarch.rpm``.
 
     Exercise the use of ``recursive`` and ``recursive_conservative``.
@@ -1450,8 +1451,8 @@ class ModularErrataCopyTestCase(unittest.TestCase):
     def setUpClass(cls):
         """Create class-wide variables."""
         cls.cfg = config.get_config()
-        if cls.cfg.pulp_version < Version('2.19'):
-            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
+        if cls.cfg.pulp_version < Version('2.21'):
+            raise unittest.SkipTest('This test requires Pulp 2.21 or newer.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_recursive_noconservative_nodependency(self):
@@ -1502,6 +1503,12 @@ class ModularErrataCopyTestCase(unittest.TestCase):
             repo['content_unit_counts']
         )
 
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            MODULE_FIXTURES_ERRATA['module_defaults_count'],
+            repo['content_unit_counts']
+        )
+
         # older RPM package already present has to be added to total of RPM
         # packages after copy.
         self.assertEqual(
@@ -1521,6 +1528,12 @@ class ModularErrataCopyTestCase(unittest.TestCase):
         self.assertEqual(
             repo['content_unit_counts']['modulemd'],
             MODULE_FIXTURES_ERRATA['modules_count'],
+            repo['content_unit_counts']
+        )
+
+        self.assertEqual(
+            repo['content_unit_counts']['modulemd_defaults'],
+            MODULE_FIXTURES_ERRATA['module_defaults_count'],
             repo['content_unit_counts']
         )
 

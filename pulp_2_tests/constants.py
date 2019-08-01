@@ -149,7 +149,8 @@ MODULE_FIXTURES_ERRATA = MappingProxyType(
         'errata_id': 'RHEA-2012:0059',
         'modules_count': 2,
         'rpm_count': 2,
-        'total_available_units': 5,
+        'module_defaults_count': 2,
+        'total_available_units': 7,
     }
 )
 """The information about a Modular Errata with RPM artifacts.
