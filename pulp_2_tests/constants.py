@@ -50,7 +50,34 @@ One can get a high-level view of the content in this repository by executing:
     https://registry.hub.docker.com/v2/repositories/$this_constant/tags \
     | python -m json.tool
 """
+DOCKER_REMOVE_UPSTREAM_NAME = 'pulp/test-fixture-1'
+"""The name of a Docker repository.
 
+This repository has several desirable properties:
+
+* It is available via both :data:`DOCKER_V1_FEED_URL` and
+  :data:`DOCKER_V2_FEED_URL`.
+* It has a manifest list, manifest, and blobs in permutation to facilitate the
+  testing of recursive removal.
+* It is owned by Pulp and therefore can be updated and maintained.
+* At long as the contents of the repo are not changed, the provided `SHA256`
+  references will work for `docker/api_v2/test_remove.py`
+* It is relatively small.
+
+This repository also has several shortcomings:
+
+* This repository isn't an official repository. It is a created repository to
+  work with the abstraction tests Pulp2 needs to test recursive removal.
+* The relation to all units inf the test has to be derived from the mongodb or
+  a script can be run in pulp-qe-tools to provide a mapping to and from
+  manifest_lists, manifests, and blobs. This is required to test shared and
+  non-shared unit removal.
+
+One can get a high-level view of the content in this repository by loading the
+repository into Pulp and then using:
+
+* https://github.com/PulpQE/pulp-qe-tools/tree/master/pulp2/tools/pulp-docker-inspector
+"""
 DOCKER_V2_FEED_URL = 'https://registry-1.docker.io'
 """The URL to a V2 Docker registry.
 
