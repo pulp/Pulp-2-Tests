@@ -1437,12 +1437,15 @@ class ModularErrataCopyTestCase(unittest.TestCase):
 
     * `Pulp #4518 <https://pulp.plan.io/issues/4518>`_
     * `Pulp #4548 <https://pulp.plan.io/issues/4548>`_
+    * `Pulp #5055 <https://pulp.plan.io/issues/5055>`_
 
     Recursive copy of ``RHEA-2012:0059`` should copy:
 
     * 2 modules: ``duck`` and ``kangaroo``.
     * 2 modulemd_defaults ``duck`` and ``kangaroo``.
     * 2 RPMS: ``kangaroo-0.3-1.noarch.rpm``, and ``duck-0.7-1.noarch.rpm``.
+
+    Copy of ``module_defaults`` introduced in Pulp 2.21.
 
     Exercise the use of ``recursive`` and ``recursive_conservative``.
     """
@@ -1451,8 +1454,8 @@ class ModularErrataCopyTestCase(unittest.TestCase):
     def setUpClass(cls):
         """Create class-wide variables."""
         cls.cfg = config.get_config()
-        if cls.cfg.pulp_version < Version('2.21'):
-            raise unittest.SkipTest('This test requires Pulp 2.21 or newer.')
+        if cls.cfg.pulp_version < Version('2.19'):
+            raise unittest.SkipTest('This test requires Pulp 2.19 or newer.')
         cls.client = api.Client(cls.cfg, api.json_handler)
 
     def test_recursive_noconservative_nodependency(self):
@@ -1503,17 +1506,24 @@ class ModularErrataCopyTestCase(unittest.TestCase):
             repo['content_unit_counts']
         )
 
-        self.assertEqual(
-            repo['content_unit_counts']['modulemd_defaults'],
-            MODULE_FIXTURES_ERRATA['module_defaults_count'],
-            repo['content_unit_counts']
-        )
+        if self.cfg.pulp_version >= Version('2.21'):
+
+            self.assertEqual(
+                repo['content_unit_counts']['modulemd_defaults'],
+                MODULE_FIXTURES_ERRATA['module_defaults_count'],
+                repo['content_unit_counts']
+            )
 
         # older RPM package already present has to be added to total of RPM
         # packages after copy.
+        total_available_units = MODULE_FIXTURES_ERRATA['total_available_units'] + 1
+        if self.cfg.pulp_version < Version('2.21'):
+            # Pulp 2.21  introduced copy of module_defaults. There are 2.
+            total_available_units -= MODULE_FIXTURES_ERRATA['module_defaults_count']
+
         self.assertEqual(
             repo['total_repository_units'],
-            MODULE_FIXTURES_ERRATA['total_available_units'] + 1,
+            total_available_units,
             repo
         )
 
@@ -1531,15 +1541,22 @@ class ModularErrataCopyTestCase(unittest.TestCase):
             repo['content_unit_counts']
         )
 
-        self.assertEqual(
-            repo['content_unit_counts']['modulemd_defaults'],
-            MODULE_FIXTURES_ERRATA['module_defaults_count'],
-            repo['content_unit_counts']
-        )
+        if self.cfg.pulp_version >= Version('2.21'):
+
+            self.assertEqual(
+                repo['content_unit_counts']['modulemd_defaults'],
+                MODULE_FIXTURES_ERRATA['module_defaults_count'],
+                repo['content_unit_counts']
+            )
+
+        total_available_units = MODULE_FIXTURES_ERRATA['total_available_units']
+        if self.cfg.pulp_version < Version('2.21'):
+            # Pulp 2.21  introduced copy of module_defaults. There are 2.
+            total_available_units -= MODULE_FIXTURES_ERRATA['module_defaults_count']
 
         self.assertEqual(
             repo['total_repository_units'],
-            MODULE_FIXTURES_ERRATA['total_available_units'],
+            total_available_units,
             repo
         )
 
