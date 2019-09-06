@@ -5,6 +5,7 @@ import time
 import unittest
 from urllib.parse import urljoin
 
+import pytest
 from packaging.version import Version
 from pulp_smash import api, cli, config, selectors, utils
 from pulp_smash.pulp2.constants import REPOSITORY_PATH, ORPHANS_PATH
@@ -14,13 +15,16 @@ from pulp_smash.pulp2.utils import (
     sync_repo,
     upload_import_unit,
 )
-import pytest
 
 from pulp_2_tests.constants import (
+    MODULE_FIXTURES_PACKAGE_STREAM,
     RPM_NAMESPACES,
+    RPM_PACKAGES_MULTIPLE_REPOS,
     RPM_SIGNED_URL,
     RPM_UNSIGNED_FEED_URL,
+    RPM_UNSIGNED_MODIFIED_FEED_URL,
     RPM_UPDATED_INFO_FEED_URL,
+    RPM_WITH_MODULES_MODIFIED_FEED_URL,
     RPM_WITH_OLD_VERSION_URL,
     RPM_YUM_METADATA_FILE,
 )
@@ -73,11 +77,14 @@ class CopyErrataRecursiveTestCase(unittest.TestCase):
         self.addCleanup(client.delete, repos[1]['_href'])
 
         # Copy data to second repository.
-        client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
-            'source_repo_id': repos[0]['id'],
-            'override_config': {'recursive': True},
-            'criteria': {'filters': {}, 'type_ids': ['erratum']},
-        })
+        client.post(
+            urljoin(repos[1]['_href'], 'actions/associate/'),
+            {
+                'source_repo_id': repos[0]['id'],
+                'override_config': {'recursive': True},
+                'criteria': {'filters': {}, 'type_ids': ['erratum']},
+            },
+        )
 
         # Assert that RPM packages were copied.
         units = search_units(cfg, repos[1], {'type_ids': ['rpm']})
@@ -123,15 +130,13 @@ class MtimeTestCase(unittest.TestCase):
         # Get the mtime of the sqlite files.
         cli_client = cli.Client(cfg, cli.echo_handler)
         cmd = '' if cli.is_root(cfg) else 'sudo '
-        cmd += "bash -c \"stat --format %Y '{}'/*\"".format(os.path.join(
-            _PATH,
-            repo['distributors'][0]['config']['relative_url'],
-            'repodata',
-        ))
-        # machine.session is used here to keep SSH session open
-        mtimes_pre = (
-            cli_client.machine.session().run(cmd)[1].strip().split().sort()
+        cmd += "bash -c \"stat --format %Y '{}'/*\"".format(
+            os.path.join(
+                _PATH, repo['distributors'][0]['config']['relative_url'], 'repodata'
+            )
         )
+        # machine.session is used here to keep SSH session open
+        mtimes_pre = cli_client.machine.session().run(cmd)[1].strip().split().sort()
 
         # Upload to the repo, and sync it.
         rpm = utils.http_get(RPM_SIGNED_URL)
@@ -141,9 +146,7 @@ class MtimeTestCase(unittest.TestCase):
         # Get the mtime of the sqlite files again.
         time.sleep(1)
         # machine.session is used here to keep SSH session open
-        mtimes_post = (
-            cli_client.machine.session().run(cmd)[1].strip().split().sort()
-        )
+        mtimes_post = cli_client.machine.session().run(cmd)[1].strip().split().sort()
         self.assertEqual(mtimes_pre, mtimes_post)
 
 
@@ -176,7 +179,7 @@ class CopyYumMetadataFileTestCase(unittest.TestCase):
         client = api.Client(cfg, api.json_handler)
         body = gen_repo(
             importer_config={'feed': RPM_YUM_METADATA_FILE},
-            distributors=[gen_distributor()]
+            distributors=[gen_distributor()],
         )
         repo_1 = client.post(REPOSITORY_PATH, body)
         self.addCleanup(client.delete, repo_1['_href'])
@@ -184,29 +187,27 @@ class CopyYumMetadataFileTestCase(unittest.TestCase):
         repo_1 = client.get(repo_1['_href'], params={'details': True})
 
         # Create a second repository.
-        body = gen_repo(
-            distributors=[gen_distributor()]
-        )
+        body = gen_repo(distributors=[gen_distributor()])
         repo_2 = client.post(REPOSITORY_PATH, body)
         repo_2 = client.get(repo_2['_href'], params={'details': True})
         self.addCleanup(client.delete, repo_2['_href'])
 
         # Copy data to second repository.
-        client.post(urljoin(repo_2['_href'], 'actions/associate/'), {
-            'source_repo_id': repo_1['id'],
-            'override_config': {'recursive': True},
-            'criteria': {
-                'filters': {},
-                'type_ids': ['yum_repo_metadata_file'],
-            }
-        })
+        client.post(
+            urljoin(repo_2['_href'], 'actions/associate/'),
+            {
+                'source_repo_id': repo_1['id'],
+                'override_config': {'recursive': True},
+                'criteria': {'filters': {}, 'type_ids': ['yum_repo_metadata_file']},
+            },
+        )
 
         # Publish repo 2
         publish_repo(cfg, repo_2)
         # Removing metadata from repo 1 and deleting orphans.
         client.post(
             urljoin(repo_1['_href'], 'actions/unassociate/'),
-            {'criteria': {'filters': {}}}
+            {'criteria': {'filters': {}}},
         )
         repo_1 = client.get(repo_1['_href'], params={'details': True})
         client.delete(ORPHANS_PATH)
@@ -216,24 +217,14 @@ class CopyYumMetadataFileTestCase(unittest.TestCase):
 
         # retrieve repodata of the published repo
         xml_element = get_repodata_repomd_xml(cfg, repo_2['distributors'][0])
-        xpath = (
-            '{{{namespace}}}data'.format(
-                namespace=RPM_NAMESPACES['metadata/repo']
-            )
-        )
+        xpath = '{{{namespace}}}data'.format(namespace=RPM_NAMESPACES['metadata/repo'])
         yum_meta_data_element = [
             element
             for element in xml_element.findall(xpath)
             if element.attrib['type'] == 'productid'
         ]
-        self.assertNotIn(
-            'yum_repo_metadata_file',
-            repo_1['content_unit_counts']
-        )
-        self.assertEqual(
-            repo_2['content_unit_counts']['yum_repo_metadata_file'],
-            1
-        )
+        self.assertNotIn('yum_repo_metadata_file', repo_1['content_unit_counts'])
+        self.assertEqual(repo_2['content_unit_counts']['yum_repo_metadata_file'], 1)
         self.assertGreater(len(yum_meta_data_element), 0)
 
 
@@ -296,7 +287,7 @@ class CopyConservativeTestCase(unittest.TestCase):
         ]
         self.assertEqual(len(dst_unit_ids), 5, dst_unit_ids)
 
-    def test_recursive_conservative_nodepdendency(self):
+    def test_recursive_conservative_nodependency(self):
         """Recursive, conservative, and no old dependency.
 
         Do the following:
@@ -421,11 +412,7 @@ class CopyConservativeTestCase(unittest.TestCase):
             if unit['metadata']['name'] == 'walrus'
         ]
         self.assertEqual(len(versions), 2, versions)
-        self.assertEqual(
-            sorted(versions),
-            sorted(expected_versions),
-            versions
-        )
+        self.assertEqual(sorted(versions), sorted(expected_versions), versions)
         dst_unit_ids = [
             unit['metadata']['name']
             for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
@@ -439,7 +426,7 @@ class CopyConservativeTestCase(unittest.TestCase):
         repos = []
         body = gen_repo(
             importer_config={'feed': RPM_UNSIGNED_FEED_URL},
-            distributors=[gen_distributor()]
+            distributors=[gen_distributor()],
         )
         repos.append(self.client.post(REPOSITORY_PATH, body))
         self.addCleanup(self.client.delete, repos[0]['_href'])
@@ -448,26 +435,182 @@ class CopyConservativeTestCase(unittest.TestCase):
         self.addCleanup(self.client.delete, repos[1]['_href'])
 
         # `old_dependency` will import an older version, `0.71` of walrus to
-        # the destiny repostiory.
+        # the destiny repository.
         if old_dependency:
             rpm = utils.http_get(RPM_WITH_OLD_VERSION_URL)
-            upload_import_unit(
-                self.cfg,
-                rpm,
-                {'unit_type_id': 'rpm'}, repos[1]
-            )
+            upload_import_unit(self.cfg, rpm, {'unit_type_id': 'rpm'}, repos[1])
             units = search_units(self.cfg, repos[1], {'type_ids': ['rpm']})
             self.assertEqual(len(units), 1, units)
 
-        self.client.post(urljoin(repos[1]['_href'], 'actions/associate/'), {
-            'source_repo_id': repos[0]['id'],
-            'override_config': {
-                'recursive': recursive,
-                'recursive_conservative': recursive_conservative,
+        self.client.post(
+            urljoin(repos[1]['_href'], 'actions/associate/'),
+            {
+                'source_repo_id': repos[0]['id'],
+                'override_config': {
+                    'recursive': recursive,
+                    'recursive_conservative': recursive_conservative,
+                },
+                'criteria': {
+                    'filters': {'unit': {'name': 'chimpanzee'}},
+                    'type_ids': ['rpm'],
+                },
             },
-            'criteria': {
-                'filters': {'unit': {'name': 'chimpanzee'}},
-                'type_ids': ['rpm'],
-            },
-        })
+        )
         return self.client.get(repos[1]['_href'], params={'details': True})
+
+
+@pytest.mark.recursive_conservative
+class MultipleSourceRepositoriesRecursiveCopyTestCase(unittest.TestCase):
+    """Test multiple source repositories recursive copy.
+
+    Repository 1 is a modular repository. There are 2 RPM dependencies
+    missing from repository 1. ``stork`` and ``shark`` RPMS.
+
+    Repository 2 is non-modular repository and has the RPMS ``stork``
+    and ``shark`` missing from repository 1.
+
+    [walrus-0.71] - Module - repository 1
+    ├── walrus - RPM - repository 1
+        └── whale - RPM present on repository 1
+            ├── shark - RPM present on repository 2
+            └── stork - RPM present on repository 2
+                                                                    
+    This test targets the following issues:
+
+    * `Pulp #5067 <https://pulp.plan.io/issues/5067>`_
+    * `Pulp #5242 <https://pulp.plan.io/issues/5242>`_
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Create class-wide variables."""
+        cls.cfg = config.get_config()
+        if cls.cfg.pulp_version < Version('2.21'):
+            raise unittest.SkipTest('This test requires Pulp 2.21 or newer.')
+        cls.client = api.Client(cls.cfg, api.json_handler)
+
+    def test_additional_repos_copy_one_destination(self):
+        """Multiple source repositories recursive copy - one repo destination.
+
+        1. Copy ``walrus - 0.71`` module to repository 3, and all
+           the dependencies RPMS should be solved and copied as well.
+        """
+        repo_1 = self.create_sync_repo(RPM_WITH_MODULES_MODIFIED_FEED_URL)
+        repo_2 = self.create_sync_repo(RPM_UNSIGNED_MODIFIED_FEED_URL)
+
+        repo_3 = self.client.post(REPOSITORY_PATH, gen_repo())
+        self.addCleanup(self.client.delete, repo_3['_href'])
+
+        self.client.post(
+            urljoin(repo_3['_href'], 'actions/associate/'),
+            {
+                'source_repo_id': repo_1['id'],
+                'override_config': {
+                    'recursive_conservative': True,
+                    'additional_repos': {repo_2['id']: repo_3['id']},
+                },
+                'criteria': {
+                    'filters': {
+                        'unit': {
+                            '$and': [
+                                {
+                                    'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                                    'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream'],
+                                }
+                            ]
+                        }
+                    },
+                    'type_ids': ['modulemd'],
+                },
+            },
+        )
+
+        repo_3 = self.client.get(repo_3['_href'], params={'details': True})
+
+        repo_3_rpms = sorted(
+            [
+                unit['metadata']['filename']
+                for unit in search_units(self.cfg, repo_3, {'type_ids': ['rpm']})
+            ]
+        )
+
+        self.assertEqual(repo_3_rpms, RPM_PACKAGES_MULTIPLE_REPOS, repo_3_rpms)
+        self.assertEqual(repo_3['content_unit_counts']['modulemd'], 1, repo_3)
+        self.assertEqual(repo_3['content_unit_counts']['modulemd_defaults'], 1, repo_3)
+
+    def test_additional_repos_copy_two_destinations(self):
+        """Multiple source repositories recursive copy - two repos destination.
+
+        1. Copy ``walrus - 0.71`` module to repository 3 and the
+           dependencies present on the repository 1 will be copied as well.
+           The other dependencies present on the repository 2, ``shark``
+           and ``stork`` will be copied to the repository 4.
+        """
+        repo_1 = self.create_sync_repo(RPM_WITH_MODULES_MODIFIED_FEED_URL)
+        repo_2 = self.create_sync_repo(RPM_UNSIGNED_MODIFIED_FEED_URL)
+
+        repo_3 = self.client.post(REPOSITORY_PATH, gen_repo())
+        self.addCleanup(self.client.delete, repo_3['_href'])
+
+        repo_4 = self.client.post(REPOSITORY_PATH, gen_repo())
+        self.addCleanup(self.client.delete, repo_4['_href'])
+
+        self.client.post(
+            urljoin(repo_3['_href'], 'actions/associate/'),
+            {
+                'source_repo_id': repo_1['id'],
+                'override_config': {
+                    'recursive_conservative': True,
+                    'additional_repos': {repo_2['id']: repo_4['id']},
+                },
+                'criteria': {
+                    'filters': {
+                        'unit': {
+                            '$and': [
+                                {
+                                    'name': MODULE_FIXTURES_PACKAGE_STREAM['name'],
+                                    'stream': MODULE_FIXTURES_PACKAGE_STREAM['stream'],
+                                }
+                            ]
+                        }
+                    },
+                    'type_ids': ['modulemd'],
+                },
+            },
+        )
+
+        repo_3 = self.client.get(repo_3['_href'], params={'details': True})
+        repo_4 = self.client.get(repo_4['_href'], params={'details': True})
+
+        repo_3_rpms = sorted(
+            [
+                unit['metadata']['filename']
+                for unit in search_units(self.cfg, repo_3, {'type_ids': ['rpm']})
+            ]
+        )
+
+        repo_4_rpms = sorted(
+            [
+                unit['metadata']['filename']
+                for unit in search_units(self.cfg, repo_4, {'type_ids': ['rpm']})
+            ]
+        )
+
+        self.assertEqual(repo_3['content_unit_counts']['modulemd'], 1, repo_3)
+        self.assertEqual(repo_3['content_unit_counts']['modulemd_defaults'], 1, repo_3)
+        self.assertEqual(repo_3_rpms, RPM_PACKAGES_MULTIPLE_REPOS[-2:], repo_3_rpms)
+
+        self.assertEqual(len(repo_4['content_unit_counts']), 1, repo_4)
+        self.assertEqual(repo_4_rpms, RPM_PACKAGES_MULTIPLE_REPOS[:-2], repo_4_rpms)
+
+    def create_sync_repo(self, feed):
+        """Create and sync a repository given a feed."""
+        body = gen_repo(
+            importer_config={'feed': feed}, distributors=[gen_distributor()]
+        )
+        # Using on_demand since its the default policy used by Satellite
+        body['importer_config']['download_policy'] = 'on_demand'
+        repo = self.client.post(REPOSITORY_PATH, body)
+        self.addCleanup(self.client.delete, repo['_href'])
+        sync_repo(self.cfg, repo)
+        return self.client.get(repo['_href'], params={'details': True})
