@@ -34,12 +34,12 @@ from pulp_2_tests.constants import (
     MODULE_ARTIFACT_RPM_DATA_2,
     MODULE_DATA_2,
     MODULE_ERRATA_RPM_DATA,
-    MODULE_FIXTURES_ERRATA,
-    MODULE_FIXTURES_PACKAGES,
-    MODULE_FIXTURES_PACKAGE_STREAM,
     MODULE_FIXTURES_DUCK_4_STREAM,
     MODULE_FIXTURES_DUCK_5_STREAM,
     MODULE_FIXTURES_DUCK_6_STREAM,
+    MODULE_FIXTURES_ERRATA,
+    MODULE_FIXTURES_PACKAGES,
+    MODULE_FIXTURES_PACKAGE_STREAM,
     RPM_DATA,
     RPM_MODULAR_OLD_VERSION_URL,
     RPM_NAMESPACES,
@@ -484,7 +484,7 @@ class CopyModulesTestCase(unittest.TestCase):
     This test addresses copying modules and verifying the correct count of
     modules, RPMs and total units copied.
 
-    Addtional abstracted modules with modular and ursine RPMs were added in
+    Additional abstracted modules with modular and ursine RPMs were added in
     pulp-fixtures to be tested in Pulp 2.20 to cover these additional cases.
 
     The following Modules, modular RPMS, and ursine RPMs are used in this
@@ -495,6 +495,7 @@ class CopyModulesTestCase(unittest.TestCase):
 
         [walrus-0.71]
         └── walrus-0.71
+
         [walrus-5.21]
         └── walrus-5.21
 
