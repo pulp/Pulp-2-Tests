@@ -652,6 +652,7 @@ class AddUnitTestCase(
     This test case targets:
 
     * `Pulp #2532 <https://pulp.plan.io/issues/2532>`_
+    * `Pulp #4059 <https://pulp.plan.io/issues/4059>`_
     * `Pulp Smash #526 <https://github.com/PulpQE/pulp-smash/issues/526>`_
     """
 
@@ -684,7 +685,8 @@ class AddUnitTestCase(
         # Publish with yum and rsync, respectively.
         for key in 'yum_distributor', 'rpm_rsync_distributor':
             publish_repo(cfg, repo, {'id': dists[key]['id']})
-        self.verify_remote_units_path(cfg, dists['rpm_rsync_distributor'], 1)
+        # This test assertion was updated by https://pulp.plan.io/issues/4059
+        self.verify_remote_units_path(cfg, dists['rpm_rsync_distributor'], 2)
 
 
 class PublishTwiceTestCase(
