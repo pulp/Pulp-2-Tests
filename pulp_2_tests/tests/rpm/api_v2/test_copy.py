@@ -17,6 +17,7 @@ from pulp_smash.pulp2.utils import (
 )
 
 from pulp_2_tests.constants import (
+    MODULE_FIXTURES_ERRATA,
     MODULE_FIXTURES_PACKAGE_STREAM,
     RPM_NAMESPACES,
     RPM_PACKAGES_MULTIPLE_REPOS,
@@ -479,6 +480,7 @@ class MultipleSourceRepositoriesRecursiveCopyTestCase(unittest.TestCase):
 
     * `Pulp #5067 <https://pulp.plan.io/issues/5067>`_
     * `Pulp #5242 <https://pulp.plan.io/issues/5242>`_
+    * `Pulp #5449 <https://pulp.plan.io/issues/5449>`_
     """
 
     @classmethod
@@ -602,6 +604,73 @@ class MultipleSourceRepositoriesRecursiveCopyTestCase(unittest.TestCase):
 
         self.assertEqual(len(repo_4['content_unit_counts']), 1, repo_4)
         self.assertEqual(repo_4_rpms, RPM_PACKAGES_MULTIPLE_REPOS[:-2], repo_4_rpms)
+
+    def test_additional_repos_errata(self):
+        """Copy errata using additional repos as source.
+
+        Copy errata ``RHEA-2012:0059`` from repository 1 to repository 3.
+        Repository 1 does not have the package ``kangaroo-0.3-1.noarch.rpm``
+        required by the errata. This package is present on the repository 2.
+        Pulp should copy the errata and solve the dependency chain for
+        repository 3.
+        """
+        if not selectors.bug_is_fixed(5449, self.cfg.pulp_version):
+            self.skipTest('https://pulp.plan.io/issues/5449')
+
+        for _ in range(2):
+            repo_1 = self.create_sync_repo(RPM_WITH_MODULES_MODIFIED_FEED_URL)
+            repo_2 = self.create_sync_repo(RPM_UNSIGNED_MODIFIED_FEED_URL)
+
+            repo_3 = self.client.post(REPOSITORY_PATH, gen_repo())
+            self.addCleanup(self.client.delete, repo_3['_href'])
+
+            self.client.post(
+                urljoin(repo_3['_href'], 'actions/associate/'),
+                {
+                    'source_repo_id': repo_1['id'],
+                    'override_config': {
+                        'recursive_conservative': True,
+                        'additional_repos': {repo_2['id']: repo_3['id']},
+                    },
+                    'criteria': {
+                        'filters': {
+                            'unit': {'id': MODULE_FIXTURES_ERRATA['errata_id']}
+                        },
+                        'type_ids': ['erratum'],
+                    },
+                },
+            )
+
+            repo_3 = self.client.get(repo_3['_href'], params={'details': True})
+
+            repo_3_rpms = sorted(
+                [
+                    unit['metadata']['filename']
+                    for unit in search_units(self.cfg, repo_3, {'type_ids': ['rpm']})
+                ]
+            )
+
+            self.assertEqual(
+                repo_3_rpms, MODULE_FIXTURES_ERRATA['packages'], repo_3_rpms
+            )
+
+            self.assertEqual(
+                repo_3['content_unit_counts']['erratum'],
+                MODULE_FIXTURES_ERRATA['errata_count'],
+                repo_3['content_unit_counts'],
+            )
+
+            self.assertEqual(
+                repo_3['content_unit_counts']['modulemd'],
+                MODULE_FIXTURES_ERRATA['modules_count'],
+                repo_3['content_unit_counts'],
+            )
+
+            self.assertEqual(
+                repo_3['content_unit_counts']['modulemd_defaults'],
+                MODULE_FIXTURES_ERRATA['module_defaults_count'],
+                repo_3['content_unit_counts'],
+            )
 
     def create_sync_repo(self, feed):
         """Create and sync a repository given a feed."""
