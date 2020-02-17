@@ -251,6 +251,7 @@ class CopyConservativeTestCase(unittest.TestCase):
     * `Pulp #4152 <https://pulp.plan.io/issues/4152>`_
     * `Pulp #4269 <https://pulp.plan.io/issues/4269>`_
     * `Pulp #4543 <https://pulp.plan.io/issues/4543>`_
+    * `Pulp #6151 <https://pulp.plan.io/issues/6151>`_
     """
 
     @classmethod
@@ -422,6 +423,34 @@ class CopyConservativeTestCase(unittest.TestCase):
         # walrus are now on repo B
         self.assertEqual(len(dst_unit_ids), 6, dst_unit_ids)
 
+    def test_recursive_conservative_filter(self):
+        """
+        Recursive, conservative, empty B, filter out walrus-5.21.
+
+        Do the following:
+
+        1. Copy all RPMs from repository A to B using ``recursive_conservative``,
+           while filtering OUT walrus-5.21
+        2. Assert that total number of RPM of units copied is equal to ``34``,
+           and the walrus package version is equal to only ``0.71``.
+        """
+        repo = self.copy_and_filter_units()
+        # Versions of modules expected to be returned
+        expected_versions = ['0.71']
+        # Search and return RPM packages after copied on B
+        versions = [
+            unit['metadata']['version']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+            if unit['metadata']['name'] == 'walrus'
+        ]
+        self.assertEqual(len(versions), 1, versions)
+        self.assertEqual(sorted(versions), sorted(expected_versions), versions)
+        dst_unit_ids = [
+            unit['metadata']['name']
+            for unit in search_units(self.cfg, repo, {'type_ids': ['rpm']})
+        ]
+        self.assertEqual(len(dst_unit_ids), 34, dst_unit_ids)
+
     def copy_units(self, recursive, recursive_conservative, old_dependency):
         """Copy units using ``recursive`` and  ``recursive_conservative``."""
         repos = []
@@ -454,6 +483,49 @@ class CopyConservativeTestCase(unittest.TestCase):
                 'criteria': {
                     'filters': {'unit': {'name': 'chimpanzee'}},
                     'type_ids': ['rpm'],
+                },
+            },
+        )
+        return self.client.get(repos[1]['_href'], params={'details': True})
+
+    def copy_and_filter_units(self):
+        """
+        Copy units using ``recursive_conservative`` filtering OUT walrus-5.21.
+
+        (see Pulp issue #6151 for the reproducer this is based on)
+        """
+        repos = []
+        body = gen_repo(
+            importer_config={'feed': RPM_UNSIGNED_FEED_URL},
+            distributors=[gen_distributor()],
+        )
+        repos.append(self.client.post(REPOSITORY_PATH, body))
+        self.addCleanup(self.client.delete, repos[0]['_href'])
+        sync_repo(self.cfg, repos[0])
+        repos.append(self.client.post(REPOSITORY_PATH, gen_repo()))
+        self.addCleanup(self.client.delete, repos[1]['_href'])
+
+        self.client.post(
+            urljoin(repos[1]['_href'], 'actions/associate/'),
+            {
+                'source_repo_id': repos[0]['id'],
+                'override_config': {
+                    'recursive_conservative': True,
+                },
+                'criteria': {
+                    'type_ids': ['rpm'],
+                    'filters': {
+                        'unit': {
+                            '$and': [
+                                {'filename': {'$exists': True}},
+                                {'$nor': [
+                                    {'$or': [
+                                        {'filename': 'walrus-5.21-1.noarch.rpm'}
+                                    ]}
+                                ]}
+                            ]
+                        }
+                    }
                 },
             },
         )
