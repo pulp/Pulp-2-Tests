@@ -55,7 +55,6 @@ from pulp_smash.pulp2.utils import (
     upload_import_erratum,
     upload_import_unit,
 )
-from requests.exceptions import HTTPError
 
 from pulp_2_tests.constants import (
     ERRATA_PACKAGES_UPDATEINFO,
@@ -642,9 +641,9 @@ class CleanUpTestCase(unittest.TestCase):
         with self.subTest(comment='check updateinfo.xml has a new path'):
             # pylint:disable=no-value-for-parameter
             self.assertNotEqual(*self.updateinfo_xml_hrefs)
-        with self.subTest(comment='check old updateinfo.xml is unavailable'):
-            with self.assertRaises(HTTPError):
-                client.get(self.updateinfo_xml_hrefs[0])
+        # old repodata files are preserved issue #5573
+        with self.subTest(comment='check old updateinfo.xml is preserved'):
+            client.get(self.updateinfo_xml_hrefs[0])
         with self.subTest(comment='check new updateinfo.xml is available'):
             client.get(self.updateinfo_xml_hrefs[1])
 
